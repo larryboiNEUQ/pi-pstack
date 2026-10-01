@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "observedDateUtc": "2026-09-30",
+  "host": { "name": "Pi", "version": "0.99.1" },
+  "scope": "Historical deterministic checks and static audit; no third-party extension execution or workflow integration test.",
+  "publishedPackage": {
+    "name": "pi-pstack",
+    "version": "0.1.0",
+    "publishedUtc": "2026-08-08T03:57:42.969Z",
+    "sourceCommit": "14da130e7aac196d355fa70706b06d5b4d71e095",
+    "tarball": "https://registry.npmjs.org/pi-pstack/-/pi-pstack-0.1.0.tgz",
+    "integrity": "sha512-yYH+JEkO2EwzSdQJiOphO4F3RyI1O4A5RoS0UYOOWBdfRrlaHbylytMJip/QYPJAt3nqqndYqDpRBx3zOxyy8w==",
+    "computedIntegrityMatchesRegistry": true
+  },
+  "commandContext": {
+    "method": "Call actual ExtensionRunner.prototype.createCommandContext with an inert base context; also inspect ExtensionContext and ExtensionCommandContext declarations.",
+    "factoryAddedKeys": ["getSystemPromptOptions", "waitForIdle", "newSession", "fork", "navigateTree", "switchSession", "reload"],
+    "sendUserMessageType": "undefined",
+    "fullPluginCommandExecuted": false
+  },
+  "publishedSkills": {
+    "method": "Pi loadSkillsFromDir and formatSkillsForPrompt on the published skills directory.",
+    "loaded": 44,
+    "autoVisible": ["how", "typescript-best-practices", "unslop", "why"],
+    "diagnostics": [],
+    "potetoName": "poteto-mode",
+    "promptChars": 2012
+  },
+  "skillCollisions": {
+    "method": "Pi loadSkills with includeDefaults=false, explicitly combining published skills and the existing user skill directories in both orders. Not a full extension startup test.",
+    "uniqueCollisionCount": 43,
+    "uniqueNames": ["architect", "arena", "automate-me", "blast-radius", "bro", "create-verification-skill", "figure-it-out", "how", "interrogate", "maintain-verification-skill", "no-comments", "principle-boundary-discipline", "principle-build-the-lever", "principle-encode-lessons-in-structure", "principle-exhaust-the-design-space", "principle-experience-first", "principle-fix-root-causes", "principle-foundational-thinking", "principle-guard-the-context-window", "principle-laziness-protocol", "principle-make-operations-idempotent", "principle-migrate-callers-then-delete-legacy-apis", "principle-minimize-reader-load", "principle-model-the-domain", "principle-never-block-on-the-human", "principle-outcome-oriented-execution", "principle-prove-it-works", "principle-redesign-from-first-principles", "principle-separate-before-serializing-shared-state", "principle-sequence-verifiable-units", "principle-subtract-before-you-add", "principle-type-system-discipline", "recall", "reflect", "setup-pstack", "show-me-your-work", "swarm", "tdd", "teach", "technical-writing", "typescript-best-practices", "unslop", "why"],
+    "scenarios": [
+      { "order": "published-before-local", "diagnosticCount": 45, "selectedSetupHowTddTeach": "published", "note": "tdd and teach each produced a duplicate collision diagnostic; distinct collision names remain 43." },
+      { "order": "local-before-published", "diagnosticCount": 43, "selectedSetupHowTddTeach": "existing local" }
+    ],
+    "potetoEntriesCoexist": ["poteto-mode", "Poteto Mode"]
+  },
+  "upstreamAlignment": {
+    "method": "Count regular files and compute SHA-256 for matching relative paths in fixed source archives; byte differences are not semantic classifications.",
+    "sourceCommit": "5f9a00e39a4c6e67703e83fbc99c0e3fd51c5aed",
+    "version": "0.15.5",
+    "npmCounts": { "skills": 44, "principles": 21, "playbooks": 23, "agents": 2 },
+    "upstreamCounts": { "skills": 47, "principles": 23, "playbooks": 23, "agents": 2 },
+    "missingSkillDirs": ["make-bot-ui", "principle-attack-the-premise", "principle-test-behavior-not-implementation"],
+    "sharedFiles": 122,
+    "sharedIdentical": 25,
+    "sharedDifferent": 97,
+    "portNpmCommon": 129,
+    "portNpmDifferent": [],
+    "portOnly": [".gitignore"]
+  },
+  "curation": {
+    "retained": "Version pins, source URLs, relevant implementation findings, semantic differences, and compact observed results.",
+    "discarded": "Downloaded source archives and extracted trees, full registry/history responses, full per-file hash printout, duplicate drafts, and transient local paths.",
+    "notClaimed": "Full runtime compatibility, exact August upstream port base SHA, latest status after the observation date, or safety certification."
+  }
+}

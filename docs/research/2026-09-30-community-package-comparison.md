@@ -8,6 +8,13 @@
 
 未安装候选包、未加载第三方扩展、未运行其子进程或真实 pstack 工作流。没有在本次仓库初始化中修改 Pi、共享技能或代理配置。
 
+## 详细证据索引
+
+- [实现审计](pi-pstack-0.1.0-implementation-audit.md)：命令 API、持续模式、角色模型、子进程、结果和权限边界。
+- [上游对齐审计](pi-pstack-upstream-alignment.md)：固定 refs、计数、平台替换和实质语义变化。
+- [替代包兼容性补充](community-port-compatibility-details.md)：协议、设置写入、宿主要求和同步维护方法。
+- [精简验证结果](evidence/verification-evidence.json)：tarball integrity、宿主上下文、技能加载与碰撞、文件比较的已观察结果。
+
 ## 用户提供的包
 
 [pi.dev 页面](https://pi.dev/packages/pi-pstack?name=cursor)对应 [kkgogogo17/pi-pstack](https://github.com/kkgogogo17/pi-pstack)。[npm registry](https://registry.npmjs.org/pi-pstack) 的 latest 为 0.1.0，发布时间为 2026-08-08。
@@ -79,3 +86,11 @@ McCune 的 [pi-deltas.json](https://github.com/McCune1224/pi-pstack/blob/master/
 实施时先确定技能单一来源、模型与 thinking 优先级、角色发现和权限范围，再验证后台调查闭环与持续模式。保留本项目逐 Issue 完成的约束。
 
 所有版本数据均为本次快照。安装、发布或开始实现前，重新核对 npm dist-tags、上游 ref 和宿主 API。
+
+## 归档取舍
+
+保留有助于后续决策、实现和复查的事实、固定来源、代码位置、差异分类和验证结果。详细调查已按主题整理为上述文件，不是代理原始转录的逐字保存。
+
+不保留下载 tarball、解包源码、完整 registry/history 回应、97 个文件的冗长哈希清单、临时脚本或重复草稿。这些可以用固定来源重新获取。上级目录的重复总报告和本次临时下载目录在归档验证后清理，研究入口统一到本仓库。
+
+本次保留的是经过筛选的调查内容，不表示第三方插件已通过运行验证，也不把建议升级为已批准决策。

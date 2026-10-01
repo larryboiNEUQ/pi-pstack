@@ -7,7 +7,11 @@
 ## 从这里开始
 
 - [已有讨论](docs/discussions/2026-09-30-initial-discussion.md)记录需求、已验证事实、建议和未决问题。
-- [社区包对比](docs/research/2026-09-30-community-package-comparison.md)记录 2026-09-30 的版本、兼容性和上游对齐调查。
+- [社区包对比](docs/research/2026-09-30-community-package-comparison.md)是研究总览。
+- [实现审计](docs/research/pi-pstack-0.1.0-implementation-audit.md)保留宿主 API、模型、子代理与权限边界的代码证据。
+- [上游对齐](docs/research/pi-pstack-upstream-alignment.md)保留固定 refs、计数和关键语义差异。
+- [替代包兼容性](docs/research/community-port-compatibility-details.md)保留各候选的配置写入、协议和维护差异。
+- [验证结果](docs/research/evidence/verification-evidence.json)保存精简机器证据，不包含下载源码或私人绝对路径。
 - [CONTEXT.md](CONTEXT.md)定义项目术语。
 - [AGENTS.md](AGENTS.md)规定代理工作方式，并指向工程技能配置。
 
