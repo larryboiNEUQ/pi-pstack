@@ -21,6 +21,11 @@
 - [ ] autonomous-run 通过 `/goal` 运行一个小任务并正常停止
 - [ ] orchestrate 和 autopilot 的启动结果或不可用原因已记录
 - [ ] 测试仓库和远端测试 PR 的清理方式已与用户确认
-- [ ] 证据记录在本 Issue 的 Comments 中
+- [x] 证据记录在本 Issue 的 Comments 中
 
 ## Comments
+### 2026-10-02 状态记录（未开始，仍 Blocked by 05）
+
+- 仅做过预检：`gh` 登录状态与 Bun 1.3.14 可用性已记录，均为环境事实，不构成任何 playbook 的启动或通过证据。
+- 05 未完成（UI 恢复需要用户许可新 TaskSpace），本 Issue 的 opening-a-pr、babysit、shipping、autonomous-run、orchestrate、autopilot 均未实机启动；测试仓库与远端 PR 的清理方案未与用户确认。
+- 已知事实：本仓库无 CI（记录为不可用）；真实 429 行为至今未观察过。

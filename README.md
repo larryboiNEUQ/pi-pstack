@@ -12,7 +12,7 @@
 
 - `npm run generate`：从固定上游提交 `c47b12849e43f18d5c374c7069c744cc55b0ea00`（pstack 0.15.5）重新生成 `adapted/` 和 `docs/upstream-guide/`。
 - `node --test test/generate.test.mjs test/pi-load.test.mjs`：窄范围生成器和离线 Pi 技能加载/展开验证；Issue 09 在独立 worktree 中运行一次，63 项通过，生成 47 个技能且输出相对集成基线无 diff。
-- `npm test`：完整本地测试集，包括生成器、安装器 fixture 和 Pi 技能加载/展开；测试需要本机上游快照、已安装的 Pi 和现有技能目录。Issue 09 未重跑完整测试集或安装器。
+- `npm test`：完整本地测试集，包括生成器、安装器 fixture 和 Pi 技能加载/展开；测试需要本机上游快照、已安装的 Pi 和现有技能目录。最近一次全量门禁在 `f7706db`：86/86 通过，`test:installed` 1/1，且固定 pin 重新生成与已提交 `adapted/`、`docs/upstream-guide/` 逐字节一致（133/19 项）。`f7706db` 按代码审查两轴修复了 3 个 Standards P2 和 2 个 Spec P2（可选 P3 行解析未改）；`7c0e776` 为纯文档性澄清，源与生成物 cmp 一致。
 - `npm run test:installed`：安装后验证——用 Pi `loadSkills` 加载真实 `~/.agents/skills`（含 `~/.pi/agent/skills` 默认目录），断言 47 个适配技能的 canonical 路径都落在 `adapted/`、无重名诊断、用户自有 tdd/teach 不受影响、make-bot-ui 不可加载。只检查目录加载，不覆盖扩展包内技能。
 
 当前未配置 CI，CI 证据记为不可用；本地通过不等于 CI 通过。
