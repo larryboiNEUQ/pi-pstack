@@ -85,9 +85,21 @@ export function validateRoleCatalog({ sourceDir, catalogPath, defaultsPath }) {
   // Role references can reveal a new seat before setup's table is updated.
   for (const file of markdownFiles(join(sourceDir, "pstack/skills"))) {
     const text = readFileSync(file, "utf8");
-    if (!text.includes("pstack-models")) continue;
-    for (const match of text.matchAll(/`([^`]+)` line/g)) {
-      const name = match[1];
+    const fileReferences = text.includes("pstack-models")
+      ? Array.from(text.matchAll(/`([^`]+)` line/g), (match) => match[1])
+      : [];
+    for (const paragraph of text.split(/\n\s*\n/)) {
+      if (!/pstack-models|\/setup-pstack/.test(paragraph)) continue;
+      const references = [
+        ...paragraph.matchAll(/`([^`]+)` line/g),
+        ...paragraph.matchAll(/\bread\s+`([^`]+)`/g),
+      ].map((match) => match[1]);
+      fileReferences.push(...references);
+      for (const list of paragraph.matchAll(/from its line\s*\(([^)]*)\)/g)) {
+        fileReferences.push(...Array.from(list[1].matchAll(/`([^`]+)`/g), (match) => match[1]));
+      }
+    }
+    for (const name of fileReferences) {
       if (name.startsWith("#")) continue;
       if (!names.has(name)) throw new Error(`Unregistered role ${JSON.stringify(name)} in ${file}`);
     }
