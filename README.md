@@ -4,7 +4,7 @@
 
 本仓库从固定的上游 pstack 快照生成 Pi 版技能（适配包），复用本机 Tintinweb 子代理系统，只支持显式调用。适配包已生成并安装：47 个技能链接到 `adapted/skills/`，三个子代理（poteto-agent、pstack-readonly、comment-sicko，含嵌套委派 allowlist）与模型表/订阅档案种子已安装到 `~/.pi/agent/`。
 
-当前清单栈依次启用 `adaptation/changes.json`、`host-changes.json`、`path-changes.json`、`setup-changes.json`，共 45 条改动；路径适配和整篇重写的 setup-pstack 均已生效。Issue 02 的子代理四模型/thinking/回退实机冒烟已通过；Issue 06 的模型建议、确认写入和备份验收在隔离 fixture 中通过，真实用户配置未改动。Issue 05、07、08 的 workflow 实机验收尚未完成，不由上述结果推定通过。
+当前清单栈依次启用 `adaptation/changes.json`、`host-changes.json`、`path-changes.json`、`setup-changes.json`，共 45 条改动；路径适配和整篇重写的 setup-pstack 均已生效。Issue 02 的子代理四模型/thinking/回退实机冒烟已通过；Issue 06 的模型建议、确认写入和备份验收在隔离 fixture 中通过，真实用户配置未改动。Issue 05 的 playbook 实机验收（含续跑与 UI 截图能力告诫）已通过；Issue 07、08 仍未完成，不由上述结果推定通过。
 
 公开仓库 <https://github.com/larryboiNEUQ/pi-pstack>，完整适配在 `pstack-pi-full-spec` 分支和 [draft PR #1](https://github.com/larryboiNEUQ/pi-pstack/pull/1) 中推进。仓库名不表示它是 npm 上同名 `pi-pstack` 社区包的镜像或 fork。
 
