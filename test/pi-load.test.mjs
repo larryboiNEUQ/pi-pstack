@@ -27,7 +27,7 @@ test("Pi loads the adapted package with no pstack name collisions (staged post-i
     "adapted/skills missing; run `npm run generate` first",
   );
   const { loadSkills } = await resolvePi();
-  const staged = stageWithoutUpstreamPstack(AGENTS_SKILLS);
+  const staged = stageWithoutUpstreamPstack(AGENTS_SKILLS, adaptedNames());
   const { skills, diagnostics } = loadSkills({
     cwd: REPO_ROOT,
     agentDir: PI_AGENT_DIR,
@@ -42,7 +42,7 @@ test("Pi loads the adapted package with no pstack name collisions (staged post-i
 // prompted). This is NOT a live interactive smoke test.
 test("/skill:poteto-mode expands via the public SDK queue path", async () => {
   const pi = await resolvePi();
-  const staged = stageWithoutUpstreamPstack(AGENTS_SKILLS);
+  const staged = stageWithoutUpstreamPstack(AGENTS_SKILLS, adaptedNames());
 
   const tmp = mkdtempSync(join(tmpdir(), "pi-sdk-"));
   const agentDir = join(tmp, "agent");
@@ -59,6 +59,10 @@ test("/skill:poteto-mode expands via the public SDK queue path", async () => {
     agentDir,
     settingsManager,
     noExtensions: true,
+    // noSkills keeps additionalSkillPaths but drops extension/package
+    // enabled paths (where the globally installed links would otherwise
+    // enter and shadow this package's generated skills).
+    noSkills: true,
     additionalSkillPaths: [ADAPTED_SKILLS, staged, PI_AGENT_SKILLS],
   });
   await resourceLoader.reload();

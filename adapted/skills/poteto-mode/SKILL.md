@@ -8,6 +8,8 @@ color: yellow
 reminder: New task? Playbook match or rigor needed -> apply /poteto-mode. Casual turn or user opts out -> don't.
 ---
 
+> Pi: Before executing this skill, read `references/pi-host.md`. That mapping overrides Cursor-specific host instructions.
+
 # Poteto mode
 
 ## Non-negotiables

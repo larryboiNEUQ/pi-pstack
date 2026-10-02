@@ -1,34 +1,40 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
+  rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { test } from "node:test";
 
 import {
+  DEFAULT_MANIFEST_PATHS,
   DEFAULT_REPO,
   PINNED_COMMIT,
   TEAM_KIT_SKILLS,
   extractSnapshot,
   generate,
+  loadManifests,
+  publishAll,
 } from "../scripts/generate.mjs";
 
 const EXCLUDED = ["make-bot-ui", "tdd", "teach"];
-const CHANGED_TARGETS = new Set([
-  "skills/poteto-mode/SKILL.md",
-  "upstream-guide/README.md",
-]);
 
 // Extract the pinned snapshot once for all tests in this file.
 const snapshot = extractSnapshot(DEFAULT_REPO, PINNED_COMMIT);
+const defaultChanges = loadManifests({});
+const CHANGED_TARGETS = new Set(
+  defaultChanges.filter((c) => c.op !== "exclude").map((c) => c.target),
+);
 
 function walkFiles(root) {
   const out = [];
@@ -63,15 +69,50 @@ function assertTreesIdentical(a, b) {
   }
 }
 
-function generateTo(tmp, sourceDir = snapshot) {
+function treeFingerprint(root) {
+  return walkFiles(root)
+    .map((p) => {
+      const rel = relative(root, p);
+      const s = statSync(p);
+      return `${rel}:${s.mode & 0o777}:${readFileSync(p).length}:${execFileSync("shasum", ["-a", "256", p], { encoding: "utf8" }).slice(0, 16)}`;
+    })
+    .join("\n");
+}
+
+function generateTo(tmp, sourceDir = snapshot, extra = {}) {
   const adaptedDir = join(tmp, "adapted");
   const guideDir = join(tmp, "upstream-guide");
-  generate({ sourceDir, adaptedDir, guideDir });
+  generate({ sourceDir, adaptedDir, guideDir, ...extra });
   return { adaptedDir, guideDir };
 }
 
 const PI_GUIDE_BLOCK =
   "> **Pi 适配说明（本仓库添加）**：本教程是上游 pstack 原文，针对 Cursor 编写。在 Pi 中：`/poteto-mode` 写作 `/skill:poteto-mode`，其他技能同理写作 `/skill:<名称>`，或在句中输入 `$<名称>`；模型配置使用 `/skill:setup-pstack`；`/loop` 改用 pi-goal 的 `/goal`；云端子代理、Cursor 自动化和持续模式不提供。完整差异见本仓库 `.scratch/pi-pstack-adaptation/spec.md`。\n\n";
+
+function upstreamPathFor(rel) {
+  if (rel === "LICENSE-pstack") return join(snapshot, "pstack/LICENSE");
+  if (rel === "LICENSE-cursor-team-kit") {
+    return join(snapshot, "cursor-team-kit/LICENSE");
+  }
+  const parts = rel.split("/");
+  if (parts[0] === "skills") {
+    const name = parts[1];
+    return TEAM_KIT_SKILLS.includes(name)
+      ? join(snapshot, "cursor-team-kit/skills", ...parts.slice(1))
+      : join(snapshot, "pstack/skills", ...parts.slice(1));
+  }
+  if (parts[0] === "agents") {
+    return join(snapshot, "pstack", rel); // agents/comment-sicko.md
+  }
+  return null; // config/ and other repo-authored files
+}
+
+function frontmatter(path) {
+  const text = readFileSync(path, "utf8");
+  const m = /^---\n([\s\S]*?)\n---/.exec(text);
+  assert.ok(m, `no frontmatter in ${path}`);
+  return m[1];
+}
 
 test("skill set is upstream pstack skills minus excluded plus team-kit skills", () => {
   const tmp = mkdtempSync(join(tmpdir(), "gen-"));
@@ -93,10 +134,7 @@ test("skill set is upstream pstack skills minus excluded plus team-kit skills", 
 test("poteto-mode frontmatter name is the lowercase slug", () => {
   const tmp = mkdtempSync(join(tmpdir(), "gen-"));
   const { adaptedDir } = generateTo(tmp);
-  const head = readFileSync(
-    join(adaptedDir, "skills/poteto-mode/SKILL.md"),
-    "utf8",
-  ).split("---")[1];
+  const head = frontmatter(join(adaptedDir, "skills/poteto-mode/SKILL.md"));
   assert.match(head, /name: poteto-mode\n/);
   assert.doesNotMatch(head, /name: Poteto Mode/);
 });
@@ -109,26 +147,33 @@ test("excluded skills are absent", () => {
   }
 });
 
+test("every declared text change lands exactly once", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir, guideDir } = generateTo(tmp);
+  for (const change of defaultChanges) {
+    if (["exclude", "add-file", "copy-upstream"].includes(change.op)) continue;
+    const base = change.target.startsWith("upstream-guide/")
+      ? join(guideDir, change.target.slice("upstream-guide/".length))
+      : join(adaptedDir, change.target);
+    const content = readFileSync(base, "utf8");
+    const n = content.split(change.text).length - 1;
+    assert.equal(n, 1, `${change.id}: text occurs ${n} times in ${change.target}`);
+  }
+});
+
 test("every file not targeted by a change is byte-identical to upstream", () => {
   const tmp = mkdtempSync(join(tmpdir(), "gen-"));
   const { adaptedDir, guideDir } = generateTo(tmp);
   for (const rel of walkFiles(adaptedDir)) {
     const r = relative(adaptedDir, rel);
-    let upstreamPath;
-    if (r === "LICENSE-pstack") {
-      upstreamPath = join(snapshot, "pstack/LICENSE");
-    } else if (r === "LICENSE-cursor-team-kit") {
-      upstreamPath = join(snapshot, "cursor-team-kit/LICENSE");
-    } else {
-      const name = r.split("/")[1];
-      upstreamPath = TEAM_KIT_SKILLS.includes(name)
-        ? join(snapshot, "cursor-team-kit/skills", name, ...r.split("/").slice(2))
-        : join(snapshot, "pstack/skills", name, ...r.split("/").slice(2));
-    }
+    const upstreamPath = upstreamPathFor(r);
     if (CHANGED_TARGETS.has(r)) {
-      assert.notDeepEqual(readFileSync(rel), readFileSync(upstreamPath));
+      if (upstreamPath && existsSync(upstreamPath)) {
+        assert.notDeepEqual(readFileSync(rel), readFileSync(upstreamPath));
+      }
       continue;
     }
+    assert.ok(upstreamPath, `${r} is neither a change target nor upstream`);
     assert.deepEqual(readFileSync(rel), readFileSync(upstreamPath), r);
     assert.equal(
       statSync(rel).mode & 0o777,
@@ -151,13 +196,54 @@ test("every file not targeted by a change is byte-identical to upstream", () => 
     }
     const upstreamPath = join(snapshot, "pstack/docs/guide", r);
     if (r === "README.md") {
-      const expected =
-        PI_GUIDE_BLOCK + readFileSync(upstreamPath, "utf8");
+      const expected = PI_GUIDE_BLOCK + readFileSync(upstreamPath, "utf8");
       assert.equal(readFileSync(rel, "utf8"), expected);
       continue;
     }
     assert.deepEqual(readFileSync(rel), readFileSync(upstreamPath), r);
   }
+});
+
+test("add-file outputs are byte-identical to their declared sources", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  for (const change of defaultChanges) {
+    if (change.op !== "add-file") continue;
+    const src = join(change.manifestDir, change.source);
+    const dst = join(adaptedDir, change.target);
+    assert.deepEqual(readFileSync(dst), readFileSync(src), change.id);
+  }
+});
+
+test("comment-sicko agent is upstream verbatim plus the name delta", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  const upstream = readFileSync(
+    join(snapshot, "pstack/agents/comment-sicko.md"),
+    "utf8",
+  );
+  const expected = upstream.replace("name: Comment Sicko", "name: comment-sicko");
+  assert.equal(
+    readFileSync(join(adaptedDir, "agents/comment-sicko.md"), "utf8"),
+    expected,
+  );
+});
+
+test("agent definitions carry no model or thinking pins", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  for (const name of ["poteto-agent", "pstack-readonly", "comment-sicko"]) {
+    const fm = frontmatter(join(adaptedDir, "agents", `${name}.md`));
+    assert.doesNotMatch(fm, /^(model|thinking):/m, name);
+  }
+});
+
+test("pstack-readonly has the exact read-only tool allowlist and no extensions", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  const fm = frontmatter(join(adaptedDir, "agents/pstack-readonly.md"));
+  assert.match(fm, /^tools: read, bash, grep, find, ls$/m);
+  assert.match(fm, /^extensions: false$/m);
 });
 
 test("running the generator twice yields identical trees", () => {
@@ -169,13 +255,40 @@ test("running the generator twice yields identical trees", () => {
   assertTreesIdentical(a.guideDir, b.guideDir);
 });
 
+test("a failed generation leaves the previous output untouched", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir, guideDir } = generateTo(tmp);
+  const before = treeFingerprint(adaptedDir) + treeFingerprint(guideDir);
+  const badManifest = join(tmp, "bad.json");
+  writeFileSync(
+    badManifest,
+    JSON.stringify({
+      changes: [
+        {
+          id: "bad-anchor",
+          op: "replace",
+          target: "skills/poteto-mode/SKILL.md",
+          anchor: "anchor that does not exist",
+          text: "x",
+        },
+      ],
+    }),
+  );
+  assert.throws(() =>
+    generateTo(tmp, snapshot, { manifestPaths: [badManifest] }),
+  );
+  const after = treeFingerprint(adaptedDir) + treeFingerprint(guideDir);
+  assert.equal(after, before);
+});
+
+// --- fixture source tests ---
+
 function buildFixture() {
   const src = mkdtempSync(join(tmpdir(), "fixture-src-"));
-  const put = (rel, content, mode) => {
+  const put = (rel, content) => {
     const p = join(src, rel);
-    mkdirSync(join(p, ".."), { recursive: true });
-    writeFileSync(p, content, mode ? { mode } : undefined);
-    if (mode) execFileSync("chmod", [String(mode), p]);
+    mkdirSync(dirname(p), { recursive: true });
+    writeFileSync(p, content);
     return p;
   };
   put("pstack/skills/poteto-mode/SKILL.md", "---\nname: Poteto Mode\n---\n");
@@ -184,6 +297,7 @@ function buildFixture() {
   put("pstack/skills/teach/SKILL.md", "---\nname: teach\n---\n");
   put("pstack/docs/guide/README.md", "# The pstack guide\n\nbody\n");
   put("pstack/LICENSE", "pstack license\n");
+  put("pstack/agents/comment-sicko.md", "---\nname: Comment Sicko\n---\n\nbody\n");
   for (const name of TEAM_KIT_SKILLS) {
     put(`cursor-team-kit/skills/${name}/SKILL.md`, `---\nname: ${name}\n---\n`);
   }
@@ -191,25 +305,95 @@ function buildFixture() {
   return { src, put };
 }
 
+function fixtureManifest(dir) {
+  const manifest = {
+    changes: [
+      {
+        id: "rename-poteto-mode",
+        op: "replace",
+        target: "skills/poteto-mode/SKILL.md",
+        anchor: "name: Poteto Mode",
+        text: "name: poteto-mode",
+      },
+      { id: "x-make-bot-ui", op: "exclude", target: "skills/make-bot-ui" },
+      { id: "x-tdd", op: "exclude", target: "skills/tdd" },
+      { id: "x-teach", op: "exclude", target: "skills/teach" },
+      {
+        id: "guide-note",
+        op: "insert-before",
+        target: "upstream-guide/README.md",
+        anchor: "# The pstack guide",
+        text: "note\n\n",
+      },
+    ],
+  };
+  const p = join(dir, "manifest.json");
+  writeFileSync(p, JSON.stringify(manifest));
+  return p;
+}
+
 test("fixture: happy path generates adapted package", () => {
   const { src } = buildFixture();
   const tmp = mkdtempSync(join(tmpdir(), "gen-"));
-  const { adaptedDir, guideDir } = generateTo(tmp, src);
+  const manifest = fixtureManifest(tmp);
+  const { adaptedDir, guideDir } = generateTo(tmp, src, {
+    manifestPaths: [manifest],
+  });
   const head = readFileSync(
     join(adaptedDir, "skills/poteto-mode/SKILL.md"),
     "utf8",
   );
   assert.match(head, /name: poteto-mode/);
   assert.ok(!existsSync(join(adaptedDir, "skills/tdd")));
-  assert.ok(readFileSync(join(guideDir, "README.md"), "utf8").startsWith(PI_GUIDE_BLOCK));
+  assert.match(
+    readFileSync(join(guideDir, "README.md"), "utf8"),
+    /^note\n\n# The pstack guide/,
+  );
+});
+
+test("fixture: add-file and copy-upstream ops land their bytes", () => {
+  const { src } = buildFixture();
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  mkdirSync(join(tmp, "files"), { recursive: true });
+  writeFileSync(join(tmp, "files/authored.md"), "authored body\n");
+  const manifest = join(tmp, "manifest.json");
+  writeFileSync(
+    manifest,
+    JSON.stringify({
+      changes: [
+        {
+          id: "add-authored",
+          op: "add-file",
+          target: "agents/authored.md",
+          source: "files/authored.md",
+        },
+        {
+          id: "copy-sicko",
+          op: "copy-upstream",
+          target: "agents/comment-sicko.md",
+          source: "pstack/agents/comment-sicko.md",
+        },
+      ],
+    }),
+  );
+  const { adaptedDir } = generateTo(tmp, src, { manifestPaths: [manifest] });
+  assert.equal(
+    readFileSync(join(adaptedDir, "agents/authored.md"), "utf8"),
+    "authored body\n",
+  );
+  assert.equal(
+    readFileSync(join(adaptedDir, "agents/comment-sicko.md"), "utf8"),
+    readFileSync(join(src, "pstack/agents/comment-sicko.md"), "utf8"),
+  );
 });
 
 test("fixture: a missing anchor fails and names file and anchor", () => {
   const { src, put } = buildFixture();
   put("pstack/skills/poteto-mode/SKILL.md", "---\nname: Something Else\n---\n");
   const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const manifest = fixtureManifest(tmp);
   assert.throws(
-    () => generateTo(tmp, src),
+    () => generateTo(tmp, src, { manifestPaths: [manifest] }),
     (err) => {
       assert.match(err.message, /rename-poteto-mode/);
       assert.match(err.message, /skills\/poteto-mode\/SKILL\.md/);
@@ -226,8 +410,9 @@ test("fixture: a duplicated anchor fails and names file and anchor", () => {
     "---\nname: Poteto Mode\n---\nname: Poteto Mode\n",
   );
   const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const manifest = fixtureManifest(tmp);
   assert.throws(
-    () => generateTo(tmp, src),
+    () => generateTo(tmp, src, { manifestPaths: [manifest] }),
     (err) => {
       assert.match(err.message, /rename-poteto-mode/);
       assert.match(err.message, /occurs 2 times/);
@@ -239,10 +424,280 @@ test("fixture: a duplicated anchor fails and names file and anchor", () => {
 test("fixture: a missing target file fails", () => {
   const { src } = buildFixture();
   const tmp = mkdtempSync(join(tmpdir(), "gen-"));
-  // Drop the guide README so the insert-before target is missing.
+  const manifest = fixtureManifest(tmp);
   execFileSync("rm", [join(src, "pstack/docs/guide/README.md")]);
   assert.throws(
-    () => generateTo(tmp, src),
-    /guide-pi-difference-note.*does not exist/s,
+    () => generateTo(tmp, src, { manifestPaths: [manifest] }),
+    /guide-note.*does not exist/s,
+  );
+});
+
+test("fixture: duplicate change ids are rejected", () => {
+  const { src } = buildFixture();
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const manifest = join(tmp, "manifest.json");
+  writeFileSync(
+    manifest,
+    JSON.stringify({
+      changes: [
+        { id: "dup", op: "exclude", target: "skills/tdd" },
+        { id: "dup", op: "exclude", target: "skills/teach" },
+      ],
+    }),
+  );
+  assert.throws(
+    () => generateTo(tmp, src, { manifestPaths: [manifest] }),
+    /Duplicate change id "dup"/,
+  );
+});
+
+test("fixture: traversal and absolute sources/targets are rejected", () => {
+  const { src } = buildFixture();
+  const mk = (tmp, change) => {
+    const manifest = join(tmp, "manifest.json");
+    writeFileSync(manifest, JSON.stringify({ changes: [change] }));
+    return manifest;
+  };
+  for (const change of [
+    {
+      id: "bad-source",
+      op: "add-file",
+      target: "agents/x.md",
+      source: "../outside.md",
+    },
+    {
+      id: "bad-target",
+      op: "add-file",
+      target: "skills/../../escape.md",
+      source: "files/x.md",
+    },
+    {
+      id: "abs-source",
+      op: "copy-upstream",
+      target: "agents/x.md",
+      source: "/etc/passwd",
+    },
+    {
+      id: "empty-anchor",
+      op: "replace",
+      target: "skills/poteto-mode/SKILL.md",
+      anchor: "",
+      text: "x",
+    },
+    {
+      id: "missing-source",
+      op: "add-file",
+      target: "agents/y.md",
+      source: "files/nonexistent.md",
+    },
+  ]) {
+    const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+    const manifest = mk(tmp, change);
+    assert.throws(
+      () => generateTo(tmp, src, { manifestPaths: [manifest] }),
+      (err) => {
+        assert.match(err.message, new RegExp(change.id));
+        return true;
+      },
+      change.id,
+    );
+  }
+});
+
+test("playbook Pi hints precede the real heading and sit outside code fences", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  for (const [file, heading] of [
+    ["playbooks/multi-phase-plan.md", "### Multi-phase or multi-PR plan\n"],
+    ["playbooks/orchestrate.md", "### Orchestrate\n"],
+  ]) {
+    const content = readFileSync(
+      join(adaptedDir, "skills/poteto-mode", file),
+      "utf8",
+    );
+    const hint = content.indexOf("> Pi: Before executing this playbook");
+    const head = content.indexOf(heading);
+    assert.ok(hint !== -1, `${file}: hint missing`);
+    assert.ok(head !== -1, `${file}: heading ${JSON.stringify(heading)} missing`);
+    assert.ok(hint < head, `${file}: hint must precede the heading`);
+    const before = content.slice(0, hint);
+    assert.equal(
+      (before.split("```").length - 1) % 2,
+      0,
+      `${file}: hint inside a fenced block`,
+    );
+  }
+});
+
+test("overlapping output roots are rejected", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  assert.throws(
+    () =>
+      generate({
+        sourceDir: snapshot,
+        adaptedDir: join(tmp, "a"),
+        guideDir: join(tmp, "a/guide"),
+      }),
+    /must not overlap/,
+  );
+});
+
+test("publishAll rolls back a completed swap when a later one fails", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "pub-"));
+  const targetA = join(tmp, "outA");
+  const targetB = join(tmp, "outB");
+  mkdirSync(targetA); writeFileSync(join(targetA, "f"), "original-A\n");
+  mkdirSync(targetB); writeFileSync(join(targetB, "f"), "original-B\n");
+  const stageA = join(tmp, ".stageA");
+  const stageB = join(tmp, ".stageB");
+  mkdirSync(stageA); writeFileSync(join(stageA, "f"), "new-A\n");
+  mkdirSync(stageB); writeFileSync(join(stageB, "f"), "new-B\n");
+  rmSync(stageB, { recursive: true }); // second staging missing → swap fails
+  assert.throws(
+    () => publishAll([
+      { staging: stageA, target: targetA },
+      { staging: stageB, target: targetB },
+    ]),
+    /Publish failed/,
+  );
+  assert.equal(readFileSync(join(targetA, "f"), "utf8"), "original-A\n");
+  assert.equal(readFileSync(join(targetB, "f"), "utf8"), "original-B\n");
+});
+
+test("an unreadable output parent fails without touching existing outputs", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir, guideDir } = generateTo(tmp);
+  const before = treeFingerprint(adaptedDir) + treeFingerprint(guideDir);
+  const parent = dirname(guideDir);
+  chmodSync(parent, 0o555);
+  try {
+    assert.throws(() => generateTo(tmp));
+  } finally {
+    chmodSync(parent, 0o755);
+  }
+  assert.equal(
+    treeFingerprint(adaptedDir) + treeFingerprint(guideDir),
+    before,
+  );
+});
+
+test("fixture: a symlinked change target is refused, external file untouched", () => {
+  const { src, put } = buildFixture();
+  const sentinel = join(src, "external-sentinel.md");
+  writeFileSync(sentinel, "do not touch\n");
+  execFileSync("rm", [join(src, "pstack/skills/poteto-mode/SKILL.md")]);
+  symlinkSync(sentinel, join(src, "pstack/skills/poteto-mode/SKILL.md"));
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const manifest = fixtureManifest(tmp);
+  assert.throws(
+    () => generateTo(tmp, src, { manifestPaths: [manifest] }),
+    (err) => {
+      assert.match(err.message, /rename-poteto-mode/);
+      assert.match(err.message, /symlink/);
+      return true;
+    },
+  );
+  assert.equal(readFileSync(sentinel, "utf8"), "do not touch\n");
+});
+
+test("fixture: add-file refuses an existing target", () => {
+  const { src } = buildFixture();
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  mkdirSync(join(tmp, "files"), { recursive: true });
+  writeFileSync(join(tmp, "files/x.md"), "x\n");
+  const manifest = join(tmp, "manifest.json");
+  writeFileSync(
+    manifest,
+    JSON.stringify({
+      changes: [
+        {
+          id: "clobber",
+          op: "add-file",
+          target: "skills/poteto-mode/SKILL.md",
+          source: "files/x.md",
+        },
+      ],
+    }),
+  );
+  assert.throws(
+    () => generateTo(tmp, src, { manifestPaths: [manifest] }),
+    /clobber.*already exists/,
+  );
+});
+
+test("fixture: exclude targets reject dot segments", () => {
+  const { src } = buildFixture();
+  for (const target of ["skills/..", "skills/."]) {
+    const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+    const manifest = join(tmp, "manifest.json");
+    writeFileSync(
+      manifest,
+      JSON.stringify({ changes: [{ id: "bad", op: "exclude", target }] }),
+    );
+    assert.throws(
+      () => generateTo(tmp, src, { manifestPaths: [manifest] }),
+      /bad.*exclude target/,
+    );
+  }
+});
+
+test("fixture: add-file beneath a symlinked dir with missing leaf is refused", () => {
+  const { src } = buildFixture();
+  // upstream-style snapshot where a skill contains a symlinked directory
+  // pointing outside the staging tree.
+  const external = mkdtempSync(join(tmpdir(), "ext-"));
+  writeFileSync(join(external, "sentinel.md"), "external\n");
+  mkdirSync(join(src, "pstack/skills/poteto-mode/ref"), { recursive: true });
+  execFileSync("rm", ["-rf", join(src, "pstack/skills/poteto-mode/ref")]);
+  symlinkSync(external, join(src, "pstack/skills/poteto-mode/ref"));
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  mkdirSync(join(tmp, "files"), { recursive: true });
+  writeFileSync(join(tmp, "files/x.md"), "x\n");
+  const manifest = join(tmp, "manifest.json");
+  writeFileSync(
+    manifest,
+    JSON.stringify({
+      changes: [
+        {
+          id: "through-link",
+          op: "add-file",
+          // leaf "new.md" does not exist; ref is a symlink out
+          target: "skills/poteto-mode/ref/new.md",
+          source: "files/x.md",
+        },
+      ],
+    }),
+  );
+  assert.throws(
+    () => generateTo(tmp, src, { manifestPaths: [manifest] }),
+    /through-link.*symlink/s,
+  );
+  assert.deepEqual(readdirSync(external), ["sentinel.md"]);
+});
+
+test("fixture: declared source beneath a symlinked dir with missing leaf is refused", () => {
+  const { src } = buildFixture();
+  const external = mkdtempSync(join(tmpdir(), "ext-"));
+  writeFileSync(join(external, "sentinel.md"), "external\n");
+  // symlink dir inside the manifest's own directory
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  symlinkSync(external, join(tmp, "files"));
+  const manifest = join(tmp, "manifest.json");
+  writeFileSync(
+    manifest,
+    JSON.stringify({
+      changes: [
+        {
+          id: "src-through-link",
+          op: "add-file",
+          target: "agents/x.md",
+          source: "files/missing.md", // leaf absent under symlinked files/
+        },
+      ],
+    }),
+  );
+  assert.throws(
+    () => generateTo(tmp, src, { manifestPaths: [manifest] }),
+    /src-through-link/,
   );
 });

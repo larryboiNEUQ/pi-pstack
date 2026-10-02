@@ -43,14 +43,22 @@ export function isUnder(child, root) {
 }
 
 // Stage a copy of a skills dir as symlinks, dropping entries whose real
-// target is the old upstream pstack install. Post-install there should be
-// none left, but the filter keeps the simulation honest if links regress.
-export function stageWithoutUpstreamPstack(dir) {
+// target is the old upstream pstack install or an already-installed
+// generated package (any */adapted/skills/<name> for a name this repo also
+// ships — different realpath, same name, would be a false collision).
+// Pre-install simulation only; unrelated user skills pass through.
+export function stageWithoutUpstreamPstack(dir, excludeNames = new Set()) {
   const stage = mkdtempSync(join(tmpdir(), "skills-stage-"));
   for (const name of readdirSync(dir)) {
     const entry = join(dir, name);
     try {
-      if (isUnder(entry, UPSTREAM_PSTACK)) continue;
+      const real = realpathSync(entry);
+      if (real === UPSTREAM_PSTACK || real.startsWith(UPSTREAM_PSTACK + sep)) {
+        continue;
+      }
+      if (excludeNames.has(name) && real.includes(`${sep}adapted${sep}skills${sep}`)) {
+        continue; // installed link to a generated package for the same name
+      }
     } catch {
       continue; // broken symlink
     }
