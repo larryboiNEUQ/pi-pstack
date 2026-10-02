@@ -2,7 +2,7 @@
 
 面向 Pi 的 pstack 适配包仓库。
 
-本仓库从固定的上游 pstack 快照生成 Pi 版技能（适配包），复用本机 Tintinweb 子代理系统，只支持显式调用。当前适配包已可生成并安装到 `~/.agents/skills`（`adapted/skills/` 共 47 个技能），但只是基础快照：映射说明、agent 文件、模型表等运行时整合仍待 Issue 02 完成。仓库名不表示它是 npm 上同名 `pi-pstack` 社区包的镜像或 fork。
+本仓库从固定的上游 pstack 快照生成 Pi 版技能（适配包），复用本机 Tintinweb 子代理系统，只支持显式调用。适配包已生成并安装：47 个技能链接到 `adapted/skills/`，三个子代理（poteto-agent、pstack-readonly、comment-sicko，含嵌套委派 allowlist）与模型表/订阅档案种子已安装到 `~/.pi/agent/`。本分支按 spec 逐步推进整个任务图；`adaptation/path-changes.json`、`setup-changes.json` 是已冻结的后续 Issue 输入，当前清单栈未启用。多模型/thinking/回退的实机冒烟仍待网络授权。仓库名不表示它是 npm 上同名 `pi-pstack` 社区包的镜像或 fork。
 
 ## 生成与测试
 
