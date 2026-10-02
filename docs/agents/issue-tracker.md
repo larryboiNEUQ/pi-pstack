@@ -28,6 +28,6 @@ To fetch a ticket, read its referenced path. A number is scoped to its feature d
 
 ## Implementation sequencing
 
-Work on one implementation Issue at a time. Complete its applicable verification, review, commit, CI evidence, and tracker updates before starting another. If blocked, stop.
+Issues follow their `Blocked by` edges only. Any unblocked Issue can start, and several can run at once.
 
 No remote tracker has been configured. Do not create GitHub or GitLab issues as a side effect of a local tracker operation.

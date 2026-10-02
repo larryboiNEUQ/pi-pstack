@@ -83,7 +83,7 @@ McCune 的 [pi-deltas.json](https://github.com/McCune1224/pi-pstack/blob/master/
 
 若保留本机现有能力，建议以官方最新固定 ref 为内容源，借鉴 McCune 的可审计替换规则，建立面向 Tintinweb 的薄适配；不要直接叠加旧目标包或竞争 runner。
 
-实施时先确定技能单一来源、模型与 thinking 优先级、角色发现和权限范围，再验证后台调查闭环与持续模式。保留本项目逐 Issue 完成的约束。
+实施时先确定技能单一来源、模型与 thinking 优先级、角色发现和权限范围，再验证后台调查闭环与持续模式。
 
 所有版本数据均为本次快照。安装、发布或开始实现前，重新核对 npm dist-tags、上游 ref 和宿主 API。
 

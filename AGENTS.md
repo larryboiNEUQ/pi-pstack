@@ -1,10 +1,8 @@
 # Agent instructions
 
-## Issue-by-Issue Implementation
+## Verification evidence
 
-Work on exactly one implementation Issue at a time. Complete implementation, verification, review, commit, applicable CI evidence, and tracker updates before starting another. If blocked, report and stop. Do not switch Issues without explicit user direction.
-
-When CI does not exist, record it as unavailable rather than claiming a pass. Research and documentation tasks are not automatically implementation Issues.
+When CI does not exist, record it as unavailable rather than claiming a pass.
 
 ## Agent skills
 
