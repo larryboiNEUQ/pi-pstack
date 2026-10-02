@@ -222,11 +222,32 @@ test("comment-sicko agent is upstream verbatim plus the name delta", () => {
     join(snapshot, "pstack/agents/comment-sicko.md"),
     "utf8",
   );
-  const expected = upstream.replace("name: Comment Sicko", "name: comment-sicko");
-  assert.equal(
-    readFileSync(join(adaptedDir, "agents/comment-sicko.md"), "utf8"),
-    expected,
+  const expected = upstream.replace(
+    "name: Comment Sicko",
+    "name: comment-sicko\nallowed_subagents: pstack-readonly, poteto-agent",
   );
+  const generated = readFileSync(
+    join(adaptedDir, "agents/comment-sicko.md"),
+    "utf8",
+  );
+  assert.equal(generated, expected);
+  // body below the frontmatter is byte-identical to upstream
+  const stripFm = (s) => s.replace(/^---\n[\s\S]*?\n---\n/, "");
+  assert.equal(stripFm(generated), stripFm(upstream));
+});
+
+test("nested delegation: poteto-agent allowlist exact, readonly none", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  const fm = frontmatter(join(adaptedDir, "agents/poteto-agent.md"));
+  const m = /^allowed_subagents: (.*)$/m.exec(fm);
+  assert.ok(m, "poteto-agent missing allowed_subagents");
+  assert.deepEqual(
+    m[1].split(",").map((s) => s.trim()).sort(),
+    ["comment-sicko", "poteto-agent", "pstack-readonly"],
+  );
+  const ro = frontmatter(join(adaptedDir, "agents/pstack-readonly.md"));
+  assert.doesNotMatch(ro, /^allowed_subagents:/m);
 });
 
 test("agent definitions carry no model or thinking pins", () => {

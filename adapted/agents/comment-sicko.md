@@ -1,5 +1,6 @@
 ---
 name: comment-sicko
+allowed_subagents: pstack-readonly, poteto-agent
 description: A deranged comment-hater that savors deletion and condemns workaround code.
 ---
 

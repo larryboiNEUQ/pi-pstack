@@ -3,6 +3,7 @@ name: poteto-agent
 description: Execute a scoped pstack playbook delegation with inherited tools and caller-selected model.
 extensions: true
 skills: true
+allowed_subagents: poteto-agent, pstack-readonly, comment-sicko
 prompt_mode: replace
 ---
 
