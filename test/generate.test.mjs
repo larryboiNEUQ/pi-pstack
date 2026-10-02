@@ -318,12 +318,71 @@ test("a failed generation leaves the previous output untouched", () => {
   assert.equal(after, before);
 });
 
-test("default manifests are base, host, then setup (not path changes)", () => {
+test("default manifests are base, host, path, then setup", () => {
   assert.deepEqual(
     DEFAULT_MANIFEST_PATHS,
-    ["changes.json", "host-changes.json", "setup-changes.json"].map((file) =>
-      join(adaptationDir, file),
-    ),
+    [
+      "changes.json",
+      "host-changes.json",
+      "path-changes.json",
+      "setup-changes.json",
+    ].map((file) => join(adaptationDir, file)),
+  );
+});
+
+const pathChanges = JSON.parse(
+  readFileSync(join(adaptationDir, "path-changes.json"), "utf8"),
+).changes;
+
+test("every declared path change lands once and replace anchors are gone", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  for (const change of pathChanges) {
+    const file = join(adaptedDir, change.target);
+    const content = readFileSync(file, "utf8");
+    const occurrences = content.split(change.text).length - 1;
+    assert.equal(
+      occurrences,
+      1,
+      `${change.id}: text occurs ${occurrences} times in ${change.target}`,
+    );
+    if (change.op === "replace") {
+      assert.ok(
+        !content.includes(change.anchor),
+        `${change.id}: anchor still present in ${change.target}`,
+      );
+    }
+  }
+});
+
+test("path semantics: lowercase dispatch, Pi sessions, .agents verify path", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  const read = (rel) => readFileSync(join(adaptedDir, rel), "utf8");
+
+  const noComments = read("skills/no-comments/SKILL.md");
+  assert.match(noComments, /subagent_type: "comment-sicko"/);
+  assert.doesNotMatch(noComments, /subagent_type: "Comment Sicko"/);
+
+  for (const rel of [
+    "skills/recall/SKILL.md",
+    "skills/reflect/SKILL.md",
+    "skills/show-me-your-work/SKILL.md",
+  ]) {
+    const content = read(rel);
+    assert.match(content, /~\/\.pi\/agent\/sessions/, rel);
+    assert.match(content, /cwd/, rel);
+  }
+  assert.match(read("skills/recall/SKILL.md"), /type: "message"/);
+  assert.match(read("skills/reflect/SKILL.md"), /type: "message"/);
+
+  const createVerify = read("skills/create-verification-skill/SKILL.md");
+  assert.match(createVerify, /\.agents\/skills\/verify-<app>\/SKILL\.md/);
+  assert.match(createVerify, /\.agents\/skills\/verify-<app>\/features\/README\.md/);
+  assert.doesNotMatch(createVerify, /\.cursor\/skills\/verify-<app>\//);
+  assert.match(
+    read("skills/maintain-verification-skill/SKILL.md"),
+    /\.agents\/skills\/verify-\*\//,
   );
 });
 

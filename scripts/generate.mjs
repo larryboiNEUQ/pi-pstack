@@ -45,6 +45,7 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const DEFAULT_MANIFEST_PATHS = [
   join(REPO_ROOT, "adaptation/changes.json"),
   join(REPO_ROOT, "adaptation/host-changes.json"),
+  join(REPO_ROOT, "adaptation/path-changes.json"),
   join(REPO_ROOT, "adaptation/setup-changes.json"),
 ];
 
