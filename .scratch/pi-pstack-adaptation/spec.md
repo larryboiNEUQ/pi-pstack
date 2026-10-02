@@ -86,7 +86,7 @@
 
 ### 内容源
 
-- 上游快照固定为本机 cursor-plugins 仓库提交 `adf3218`，pstack 版本 0.15.5。
+- 上游快照固定为官方 cursor/plugins 在 2026-10-02 查询并获取的 HEAD `c47b12849e43f18d5c374c7069c744cc55b0ea00`，pstack 版本仍为 0.15.5（Issue 09；选定输入无变化，依据 lead 冻结审计）。
 - 从同一仓库的 cursor-team-kit 原样带入 deslop、control-cli、control-ui。三者为 MIT 许可，不依赖 Cursor。
 - 跟进上游最新版本另开 Issue。
 
