@@ -1,0 +1,38 @@
+{
+  "changes": [
+    {
+      "id": "rename-poteto-mode",
+      "op": "replace",
+      "target": "skills/poteto-mode/SKILL.md",
+      "anchor": "name: Poteto Mode",
+      "text": "name: poteto-mode",
+      "reason": "Pi skill names must be lowercase slugs; /skill:poteto-mode does not expand otherwise."
+    },
+    {
+      "id": "exclude-make-bot-ui",
+      "op": "exclude",
+      "target": "skills/make-bot-ui",
+      "reason": "Depends on Cursor webhook automations, which are not provided in Pi."
+    },
+    {
+      "id": "exclude-tdd",
+      "op": "exclude",
+      "target": "skills/tdd",
+      "reason": "The user's existing tdd skill takes precedence; shipping this would collide on the same name."
+    },
+    {
+      "id": "exclude-teach",
+      "op": "exclude",
+      "target": "skills/teach",
+      "reason": "The user's existing teach skill takes precedence; shipping this would collide on the same name."
+    },
+    {
+      "id": "guide-pi-difference-note",
+      "op": "insert-before",
+      "target": "upstream-guide/README.md",
+      "anchor": "# The pstack guide",
+      "text": "> **Pi 适配说明（本仓库添加）**：本教程是上游 pstack 原文，针对 Cursor 编写。在 Pi 中：`/poteto-mode` 写作 `/skill:poteto-mode`，其他技能同理写作 `/skill:<名称>`，或在句中输入 `$<名称>`；模型配置使用 `/skill:setup-pstack`；`/loop` 改用 pi-goal 的 `/goal`；云端子代理、Cursor 自动化和持续模式不提供。完整差异见本仓库 `.scratch/pi-pstack-adaptation/spec.md`。\n\n",
+      "reason": "Readers of the copied upstream guide need the Pi differences (skill invocation syntax, model setup, /goal replacing /loop, unavailable Cursor capabilities) up front."
+    }
+  ]
+}
