@@ -436,15 +436,23 @@ export function generate({
   const changes = loadManifests({ changesPath, manifestPaths });
   // Canonical paths are only for the overlap check; retain normalized paths
   // for staging and publication.
-  const a = canonicalOutputPath(adaptedDir);
-  const g = canonicalOutputPath(guideDir);
+  const canonicalAdaptedPath = canonicalOutputPath(adaptedDir);
+  const canonicalGuidePath = canonicalOutputPath(guideDir);
   if (
-    a === g ||
-    a.startsWith(g.endsWith(sep) ? g : g + sep) ||
-    g.startsWith(a.endsWith(sep) ? a : a + sep)
+    canonicalAdaptedPath === canonicalGuidePath ||
+    canonicalAdaptedPath.startsWith(
+      canonicalGuidePath.endsWith(sep)
+        ? canonicalGuidePath
+        : canonicalGuidePath + sep,
+    ) ||
+    canonicalGuidePath.startsWith(
+      canonicalAdaptedPath.endsWith(sep)
+        ? canonicalAdaptedPath
+        : canonicalAdaptedPath + sep,
+    )
   ) {
     throw new GenerateError(
-      `adaptedDir ${a} and guideDir ${g} must not overlap.`,
+      `adaptedDir ${canonicalAdaptedPath} and guideDir ${canonicalGuidePath} must not overlap.`,
     );
   }
   const pstackSkillsDir = join(sourceDir, "pstack/skills");

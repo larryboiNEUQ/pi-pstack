@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   realpathSync,
   symlinkSync,
   writeFileSync,
@@ -38,6 +39,42 @@ test("Pi loads the adapted package with no pstack name collisions (staged post-i
     includeDefaults: false,
   });
   assertNoAdaptedProblems(skills, diagnostics, adaptedNames());
+});
+
+test("external tdd and teach resolve to real user paths outside the package", async () => {
+  for (const name of ["tdd", "teach"]) {
+    const shared = join(AGENTS_SKILLS, name);
+    const agentScoped = join(PI_AGENT_SKILLS, name);
+    assert.ok(
+      existsSync(shared) || existsSync(agentScoped),
+      `host must advertise an external ${name} skill at ${shared} or ${agentScoped}`,
+    );
+  }
+  const staged = stageWithoutUpstreamPstack(AGENTS_SKILLS, adaptedNames());
+  const { loadSkills } = await resolvePi();
+  const { skills, diagnostics } = loadSkills({
+    cwd: REPO_ROOT,
+    agentDir: PI_AGENT_DIR,
+    skillPaths: [ADAPTED_SKILLS, staged, PI_AGENT_SKILLS],
+    includeDefaults: false,
+  });
+  for (const name of ["tdd", "teach"]) {
+    const found = skills.filter((s) => s.name === name);
+    assert.equal(found.length, 1, `${name} must resolve exactly once`);
+    const skill = found[0];
+    assert.ok(
+      !realpathSync(skill.baseDir).startsWith(realpathSync(ADAPTED_SKILLS) + "/"),
+      `${name} must not resolve inside the adapted package`,
+    );
+    assert.ok(readFileSync(skill.filePath, "utf8").length > 0,
+      `${name} SKILL.md must be readable`);
+    assert.ok(
+      !diagnostics.some(
+        (d) => d.type === "collision" && d.collision?.name === name,
+      ),
+      `${name} must not produce a collision diagnostic`,
+    );
+  }
 });
 
 test("Pi reports a how collision from an unrelated other/adapted/skills package", async () => {

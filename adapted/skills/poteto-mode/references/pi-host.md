@@ -7,6 +7,7 @@ Read this reference before executing a pstack skill on Pi. It overrides Cursor-s
 - Invoke `/skill:poteto-mode <task>` explicitly. The main conversation executes the selected playbook. There is no persistent mode, per-turn injection, or automatic handoff to poteto-agent.
 - `/skill:<name>` expands other skills. Inline `$<name>` depends on the user's existing inline-skill plugins.
 - Resolve a relative path against the invoking skill's base directory. Read a sibling skill at `<baseDir>/../<name>/SKILL.md`. From a playbook, first locate its enclosing poteto-mode directory.
+- `tdd` and `teach` are intentionally external, not siblings in this package. Resolve their actual paths from the host's advertised skill catalog. If absent there, check `~/.agents/skills/<name>/SKILL.md`, then `~/.pi/agent/skills/<name>/SKILL.md`; report unavailable if neither exists. Never recreate or overwrite the user's existing skills to satisfy a relative reference.
 - Read hidden sibling and principle skills by path. `disable-model-invocation` hides discovery metadata, not explicit invocation or file access.
 - Copy the selected playbook steps into a Markdown checklist. Track skipped steps with a reason. A missing todo tool does not remove the checklist.
 
@@ -59,7 +60,7 @@ For reviewers and race seats, start one agent per list entry. Track each seat's 
 
 At the root, record the main conversation's exact provider/model and known thinking as `root-main` task context. Include that context in each top-level delegation and preserve it unchanged in nested briefs. The immediate parent of a nested agent may use another role model; it is not the root main model.
 
-Select a cross-judge or trail auditor from the configured pool with a different family from the working parent when possible. If no distinct family is available, report reduced independence before proceeding.
+Select a cross-judge or trail auditor from the configured pool with a different family from the root-main conversation when possible, including inside nested delegates. Do not compare only with the immediate delegate's role model. If root-main context is missing, return the selection to the root; if no distinct family is available, report reduced independence before proceeding.
 
 The adapter-only slice roles are recall slices, automate-me slices, verification source wave, and comment sicko. Use their table lines for upstream instructions that otherwise say fast/cheap or omit a role. The orchestrate and autopilot coordinator stays on the main conversation model.
 

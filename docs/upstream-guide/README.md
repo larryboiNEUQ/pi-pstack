@@ -1,4 +1,4 @@
-> **Pi 适配说明（本仓库添加）**：本教程是上游 pstack 原文，针对 Cursor 编写。在 Pi 中：`/poteto-mode` 写作 `/skill:poteto-mode`，其他技能同理写作 `/skill:<名称>`，或在句中输入 `$<名称>`；模型配置使用 `/skill:setup-pstack`；`/loop` 改用 pi-goal 的 `/goal`；云端子代理、Cursor 自动化和持续模式不提供。完整差异见本仓库 `.scratch/pi-pstack-adaptation/spec.md`。
+> **Pi 适配说明（本仓库添加）**：本教程是上游 pstack 原文，针对 Cursor 编写。Pi 安装不同：先在本仓库运行 `npm run generate`，将 `adapted/skills/` 下的技能链接到 `~/.agents/skills/`（先检查同名冲突并备份），再用 `node scripts/install.mjs` 预检，经授权后加 `--apply` 安装三个 agent 与配置种子；不要在 Pi 中使用 Cursor 的 `/add-plugin pstack`。`/poteto-mode` 写作 `/skill:poteto-mode`，其他技能同理写作 `/skill:<名称>`，或在句中输入 `$<名称>`；模型配置使用 `/skill:setup-pstack`；`/loop` 改用 pi-goal 的 `/goal`；云端子代理、Cursor 自动化和持续模式不提供。完整差异见本仓库 `.scratch/pi-pstack-adaptation/spec.md`。
 
 # The pstack guide
 

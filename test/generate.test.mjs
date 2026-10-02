@@ -96,7 +96,7 @@ function generateTo(tmp, sourceDir = snapshot, extra = {}) {
 }
 
 const PI_GUIDE_BLOCK =
-  "> **Pi 适配说明（本仓库添加）**：本教程是上游 pstack 原文，针对 Cursor 编写。在 Pi 中：`/poteto-mode` 写作 `/skill:poteto-mode`，其他技能同理写作 `/skill:<名称>`，或在句中输入 `$<名称>`；模型配置使用 `/skill:setup-pstack`；`/loop` 改用 pi-goal 的 `/goal`；云端子代理、Cursor 自动化和持续模式不提供。完整差异见本仓库 `.scratch/pi-pstack-adaptation/spec.md`。\n\n";
+  "> **Pi 适配说明（本仓库添加）**：本教程是上游 pstack 原文，针对 Cursor 编写。Pi 安装不同：先在本仓库运行 `npm run generate`，将 `adapted/skills/` 下的技能链接到 `~/.agents/skills/`（先检查同名冲突并备份），再用 `node scripts/install.mjs` 预检，经授权后加 `--apply` 安装三个 agent 与配置种子；不要在 Pi 中使用 Cursor 的 `/add-plugin pstack`。`/poteto-mode` 写作 `/skill:poteto-mode`，其他技能同理写作 `/skill:<名称>`，或在句中输入 `$<名称>`；模型配置使用 `/skill:setup-pstack`；`/loop` 改用 pi-goal 的 `/goal`；云端子代理、Cursor 自动化和持续模式不提供。完整差异见本仓库 `.scratch/pi-pstack-adaptation/spec.md`。\n\n";
 
 function upstreamPathFor(rel) {
   if (rel === "LICENSE-pstack") return join(snapshot, "pstack/LICENSE");
@@ -154,6 +154,87 @@ test("excluded skills are absent", () => {
   for (const name of EXCLUDED) {
     assert.ok(!existsSync(join(adaptedDir, "skills", name)), name);
   }
+});
+
+test("generated host reference resolves external tdd/teach via catalog with fallback paths", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  const host = readFileSync(
+    join(adaptedDir, "skills/poteto-mode/references/pi-host.md"),
+    "utf8",
+  );
+  assert.ok(
+    host.includes("`tdd` and `teach` are intentionally external"),
+    "host text must name tdd and teach as external",
+  );
+  assert.ok(
+    host.includes("advertised skill catalog"),
+    "host text must require the host's skill catalog",
+  );
+  assert.ok(
+    host.includes("~/.agents/skills/<name>/SKILL.md"),
+    "host text must include the shared skills fallback path",
+  );
+  assert.ok(
+    host.includes("~/.pi/agent/skills/<name>/SKILL.md"),
+    "host text must include the pi-agent skills fallback path",
+  );
+  for (const name of ["tdd", "teach"]) {
+    assert.ok(
+      !existsSync(join(adaptedDir, "skills", name)),
+      `${name} must remain absent from the adapted package`,
+    );
+  }
+});
+
+test("generated host cross-judge compares root-main including nested delegates", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  const host = readFileSync(
+    join(adaptedDir, "skills/poteto-mode/references/pi-host.md"),
+    "utf8",
+  );
+  assert.ok(
+    host.includes(
+      "different family from the root-main conversation",
+    ),
+    "cross-judge text must compare against root-main",
+  );
+  assert.ok(
+    host.includes("including inside nested delegates"),
+    "cross-judge text must cover nested delegates",
+  );
+  assert.ok(
+    host.includes("Do not compare only with the immediate delegate's role model"),
+    "cross-judge text must reject the immediate delegate as the reference",
+  );
+  assert.ok(
+    host.includes("return the selection to the root"),
+    "cross-judge text must return to the root when root-main is missing",
+  );
+});
+
+test("guide preface covers Pi installation differences only", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { guideDir } = generateTo(tmp);
+  const readme = readFileSync(join(guideDir, "README.md"), "utf8");
+  for (const needle of [
+    "npm run generate",
+    "~/.agents/skills/",
+    "node scripts/install.mjs",
+    "--apply",
+  ]) {
+    assert.ok(readme.includes(needle), `guide preface missing ${needle}`);
+  }
+  assert.ok(
+    readme.includes("/add-plugin"),
+    "guide preface must prohibit Cursor's /add-plugin",
+  );
+  const upstream = readFileSync(
+    join(snapshot, "pstack/docs/guide/README.md"),
+    "utf8",
+  );
+  assert.equal(readme, PI_GUIDE_BLOCK + upstream);
 });
 
 test("every declared text change lands exactly once", () => {
