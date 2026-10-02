@@ -350,6 +350,21 @@ test("published role catalog covers every default-model row", () => {
   assert.deepEqual(defaults, names);
 });
 
+test("metadata-key names outside the rule header are unregistered roles", () => {
+  const src = mkdtempSync(join(tmpdir(), "reserved-role-"));
+  cpSync(snapshot, src, { recursive: true });
+  const path = join(src, "pstack/skills/setup-pstack/SKILL.md");
+  const text = readFileSync(path, "utf8");
+  const row = "feature, refactoring: grok-4.7-xhigh-fast";
+  assert.equal(text.split(row).length - 1, 1);
+  writeFileSync(path, text.replace(row, `model: qwen-unknown\n${row}`));
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  assert.throws(
+    () => generateTo(tmp, src),
+    /Unregistered role "model" in .*setup-pstack\/SKILL\.md/,
+  );
+});
+
 for (const [label, rel, mutate, errorPattern] of [
   [
     "unregistered setup role",

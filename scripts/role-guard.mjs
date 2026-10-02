@@ -60,12 +60,17 @@ export function validateRoleCatalog({ sourceDir, catalogPath, defaultsPath }) {
   const block = section && /```[^\n]*\n([\s\S]*?)\n```/.exec(section[1]);
   if (!block) throw new Error(`Cannot locate upstream model-role table in ${setupPath}`);
   const upstreamNames = new Set();
+  let inRuleHeader = false;
   for (const line of block[1].split(/\r?\n/)) {
-    if (!line.trim() || line.startsWith("#") || line === "---") continue;
+    if (line === "---") {
+      inRuleHeader = !inRuleHeader;
+      continue;
+    }
+    if (!line.trim() || line.startsWith("#")) continue;
     const separator = line.indexOf(": ");
     if (separator < 1) throw new Error(`Unrecognized upstream role row in ${setupPath}: ${line}`);
     const name = line.slice(0, separator);
-    if (RESERVED_RULE_KEYS.has(name)) continue;
+    if (inRuleHeader && RESERVED_RULE_KEYS.has(name)) continue;
     if (!names.has(name) || !catalog.upstreamRoles.includes(name)) {
       throw new Error(`Unregistered role ${JSON.stringify(name)} in ${setupPath}`);
     }

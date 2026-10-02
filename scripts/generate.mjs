@@ -21,7 +21,7 @@ import { basename, dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateRoleCatalog } from "./role-guard.mjs";
 
-export const PINNED_COMMIT = "adf3218ca2f5b9971eedc07a76bef22df7701539";
+export const PINNED_COMMIT = "c47b12849e43f18d5c374c7069c744cc55b0ea00";
 export const DEFAULT_REPO = join(
   process.env.HOME ?? "~",
   ".agents/repos/cursor-plugins",
