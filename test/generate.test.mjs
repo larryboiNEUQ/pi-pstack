@@ -7,6 +7,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  realpathSync,
   readFileSync,
   readdirSync,
   rmSync,
@@ -15,7 +16,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { test } from "node:test";
 
 import {
@@ -275,6 +276,25 @@ test("agent definitions carry no model or thinking pins", () => {
   }
 });
 
+test("root-main fallback payloads are exact copies of the frozen lead sources", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  for (const rel of [
+    "agents/poteto-agent.md",
+    "skills/poteto-mode/references/pi-host.md",
+  ]) {
+    assert.deepEqual(
+      readFileSync(join(adaptedDir, rel)),
+      readFileSync(join(adaptationDir, "files", rel)),
+      rel,
+    );
+  }
+  assert.doesNotMatch(
+    frontmatter(join(adaptedDir, "agents/poteto-agent.md")),
+    /^(model|thinking):/m,
+  );
+});
+
 test("pstack-readonly has the exact read-only tool allowlist and no extensions", () => {
   const tmp = mkdtempSync(join(tmpdir(), "gen-"));
   const { adaptedDir } = generateTo(tmp);
@@ -423,6 +443,38 @@ test("metadata-key names outside the rule header are unregistered roles", () => 
     /Unregistered role "model" in .*setup-pstack\/SKILL\.md/,
   );
 });
+
+for (const [anchor, replacement] of [
+  ["read `hardest tasks`", "read `unregistered probe`"],
+  [
+    "from its line (`feature, refactoring`,",
+    "from its line (`unregistered probe`,",
+  ],
+]) {
+  test(`unregistered poteto role in ${anchor} fails before publication`, () => {
+    const src = mkdtempSync(join(tmpdir(), "poteto-role-"));
+    cpSync(snapshot, src, { recursive: true });
+    const path = join(src, "pstack/skills/poteto-mode/SKILL.md");
+    const text = readFileSync(path, "utf8");
+    assert.equal(text.split(anchor).length - 1, 1);
+    writeFileSync(path, text.replace(anchor, replacement));
+    const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+    for (const output of ["adapted", "upstream-guide"]) {
+      mkdirSync(join(tmp, output));
+      writeFileSync(join(tmp, output, "sentinel"), "existing output\n");
+    }
+    const before = treeFingerprint(tmp);
+    assert.throws(
+      () => generateTo(tmp, src),
+      (error) => {
+        assert.match(error.message, /Unregistered role "unregistered probe"/);
+        assert.ok(error.message.includes(path));
+        return true;
+      },
+    );
+    assert.equal(treeFingerprint(tmp), before);
+  });
+}
 
 for (const [label, rel, mutate, errorPattern] of [
   [
@@ -691,6 +743,42 @@ test("fixture: explicit base-only stack does not require upstream role tables", 
   assert.ok(!existsSync(join(adaptedDir, "skills/setup-pstack")));
 });
 
+test("fixture: relative source and output roots support copy-upstream and add-file", () => {
+  const { src } = buildFixture();
+  const tmp = mkdtempSync(join(tmpdir(), "relative-gen-"));
+  const authored = join(tmp, "files/poteto-agent.md");
+  mkdirSync(dirname(authored), { recursive: true });
+  cpSync(join(adaptationDir, "files/agents/poteto-agent.md"), authored);
+  const manifest = join(tmp, "manifest.json");
+  writeFileSync(manifest, JSON.stringify({
+    changes: [
+      {
+        id: "relative-copy", op: "copy-upstream",
+        target: "agents/comment-sicko.md", source: "pstack/agents/comment-sicko.md",
+      },
+      {
+        id: "relative-add", op: "add-file",
+        target: "agents/poteto-agent.md", source: "files/poteto-agent.md",
+      },
+    ],
+  }));
+  const adaptedDir = join(tmp, "adapted");
+  const guideDir = join(tmp, "guide");
+  const result = generate({
+    sourceDir: relative(process.cwd(), src),
+    adaptedDir: relative(process.cwd(), adaptedDir),
+    guideDir: relative(process.cwd(), guideDir),
+    manifestPaths: [relative(process.cwd(), manifest)],
+  });
+  assert.equal(result.adaptedDir, resolve(adaptedDir));
+  assert.equal(result.guideDir, resolve(guideDir));
+  assert.deepEqual(
+    readFileSync(join(adaptedDir, "agents/comment-sicko.md")),
+    readFileSync(join(src, "pstack/agents/comment-sicko.md")),
+  );
+  assert.deepEqual(readFileSync(join(adaptedDir, "agents/poteto-agent.md")), readFileSync(authored));
+});
+
 test("fixture: add-file and copy-upstream ops land their bytes", () => {
   const { src } = buildFixture();
   const tmp = mkdtempSync(join(tmpdir(), "gen-"));
@@ -881,6 +969,70 @@ test("overlapping output roots are rejected", () => {
     /must not overlap/,
   );
 });
+
+for (const shape of ["equal", "nested", "prospective-nested"]) {
+  test(`physical ${shape} output aliases fail before existing outputs or sentinels change`, () => {
+    const tmp = mkdtempSync(join(tmpdir(), "output-alias-"));
+    const real = join(tmp, "real");
+    mkdirSync(join(real, "adapted"), { recursive: true });
+    mkdirSync(join(real, "guide"));
+    writeFileSync(join(real, "adapted/sentinel"), "original adapted\n");
+    writeFileSync(join(real, "guide/sentinel"), "original guide\n");
+    writeFileSync(join(real, "sentinel"), "external sentinel\n");
+    const alias = join(tmp, "alias");
+    symlinkSync(real, alias);
+    const before = treeFingerprint(real);
+    const adaptedDir = shape === "prospective-nested"
+      ? join(real, "missing/output")
+      : join(real, "adapted");
+    const guideDir = shape === "equal"
+      ? join(alias, "adapted")
+      : shape === "nested"
+        ? join(alias, "adapted/guide")
+        : join(alias, "missing/output/guide");
+    assert.throws(
+      () => generate({ sourceDir: snapshot, adaptedDir, guideDir }),
+      /must not overlap/,
+    );
+    assert.equal(treeFingerprint(real), before);
+    assert.deepEqual(readdirSync(tmp).sort(), ["alias", "real"]);
+    assert.ok(!existsSync(join(real, "missing")), "canonicalization must not create missing parents");
+  });
+}
+
+test("native /tmp and /private/tmp output aliases are rejected", {
+  skip: !existsSync("/private/tmp") || realpathSync("/tmp") !== realpathSync("/private/tmp"),
+}, () => {
+  const tmp = mkdtempSync("/tmp/output-native-alias-");
+  const real = realpathSync(tmp);
+  assert.throws(
+    () => generate({
+      sourceDir: snapshot,
+      adaptedDir: join(tmp, "missing/output"),
+      guideDir: join(real, "missing/output/guide"),
+    }),
+    /must not overlap/,
+  );
+  assert.deepEqual(readdirSync(tmp), []);
+});
+
+for (const link of ["dangling", "loop"]) {
+  test(`${link} output ancestor fails closed without staging or publication`, () => {
+    const tmp = mkdtempSync(join(tmpdir(), "output-link-"));
+    const alias = join(tmp, "alias");
+    symlinkSync(link === "dangling" ? join(tmp, "missing") : alias, alias);
+    const guideDir = join(tmp, "guide");
+    mkdirSync(guideDir);
+    writeFileSync(join(guideDir, "sentinel"), "original guide\n");
+    const before = treeFingerprint(guideDir);
+    assert.throws(
+      () => generate({ sourceDir: snapshot, adaptedDir: join(alias, "output"), guideDir }),
+      /Cannot resolve output path/,
+    );
+    assert.equal(treeFingerprint(guideDir), before);
+    assert.deepEqual(readdirSync(tmp).sort(), ["alias", "guide"]);
+  });
+}
 
 test("publishAll rolls back a completed swap when a later one fails", () => {
   const tmp = mkdtempSync(join(tmpdir(), "pub-"));

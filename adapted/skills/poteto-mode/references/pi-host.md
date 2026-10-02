@@ -57,6 +57,8 @@ Read `~/.pi/agent/pstack/models.md` before the first role-based spawn in a task.
 
 For reviewers and race seats, start one agent per list entry. Track each seat's requested and effective model. Identify model families by model ID (Claude, GPT, Grok, SWE), not by provider: Devin can host several families.
 
+At the root, record the main conversation's exact provider/model and known thinking as `root-main` task context. Include that context in each top-level delegation and preserve it unchanged in nested briefs. The immediate parent of a nested agent may use another role model; it is not the root main model.
+
 Select a cross-judge or trail auditor from the configured pool with a different family from the working parent when possible. If no distinct family is available, report reduced independence before proceeding.
 
 The adapter-only slice roles are recall slices, automate-me slices, verification source wave, and comment sicko. Use their table lines for upstream instructions that otherwise say fast/cheap or omit a role. The orchestrate and autopilot coordinator stays on the main conversation model.
@@ -65,7 +67,7 @@ The adapter-only slice roles are recall slices, automate-me slices, verification
 
 1. Preserve the failed seat's requested model, effective model if known, error, and partial output.
 2. For a model/provider startup failure (including authentication or version gates), quota exhaustion, rate limits, unavailable models, or an effective-model mismatch, retry that seat once on the current main conversation model. Preserve a version-gate error as such; do not relabel it as quota exhaustion or update installed providers without approval.
-3. Start a fresh Agent without resume. Omit model so it follows the parent. Pass the parent's current thinking when known; otherwise inspect and report the host-selected thinking level. Carry forward the original scope and useful partial evidence, not a claim that the first run succeeded.
+3. Start a fresh Agent without resume. At the root, omit model to use the root main conversation model. Inside a delegate, pass the recorded `root-main` provider/model explicitly and its known thinking; do not omit model and accidentally inherit the immediate delegate's role model. If root-main context is missing, return the failed seat to the root for its fresh retry rather than guessing from global settings. Carry forward the original scope and useful partial evidence, not a claim that the first run succeeded. Report the effective thinking if the root level is unknown.
 4. Report requested model, fallback model, failure reason, and any loss of panel diversity. If the inherited retry fails, report the seat incomplete.
 
 This rule overrides all upstream instructions to retry on a same-family default, use Sonnet, select a closest slug from an error, or use Claude when no family matches. Do not change the persistent model table during fallback. Host-internal transport retries may happen first; do not invent their count or claim an unobserved 429.

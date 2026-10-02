@@ -10,6 +10,7 @@ import {
   readdirSync,
   readFileSync,
   readlinkSync,
+  realpathSync,
   renameSync,
   rmSync,
   statSync,
@@ -135,6 +136,7 @@ export function loadManifests({ changesPath, manifestPaths } = {}) {
 
 /** Join rel under root, rejecting absolute paths and .. traversal. */
 function safeJoin(root, rel, what, id) {
+  root = resolve(root);
   if (typeof rel !== "string" || rel.length === 0) {
     throw new GenerateError(`Change ${id}: ${what} is empty.`);
   }
@@ -144,7 +146,7 @@ function safeJoin(root, rel, what, id) {
     );
   }
   const p = resolve(root, rel);
-  if (p !== root && !p.startsWith(root + sep)) {
+  if (p !== root && !p.startsWith(root.endsWith(sep) ? root : root + sep)) {
     throw new GenerateError(
       `Change ${id}: ${what} escapes its root: ${rel}.`,
     );
@@ -335,6 +337,27 @@ function stageBeside(target) {
   return mkdtempSync(join(parent, `.gen-${basename(target)}-`));
 }
 
+/** Resolve physical output ancestry without creating missing directories. */
+function canonicalOutputPath(path) {
+  let ancestor = path;
+  const missing = [];
+  try {
+    while (true) {
+      try {
+        lstatSync(ancestor);
+      } catch (error) {
+        if (error.code !== "ENOENT" || dirname(ancestor) === ancestor) throw error;
+        missing.unshift(basename(ancestor));
+        ancestor = dirname(ancestor);
+        continue;
+      }
+      return join(realpathSync(ancestor), ...missing);
+    }
+  } catch (error) {
+    throw new GenerateError(`Cannot resolve output path ${path}: ${error.message}`);
+  }
+}
+
 /**
  * Swap fully built staging trees into place as a unit: old trees are parked
  * until BOTH swaps succeed; a mid-publish failure rolls back completed moves
@@ -407,11 +430,19 @@ export function generate({
   if (!sourceDir) {
     throw new GenerateError("generate() requires a sourceDir.");
   }
+  sourceDir = resolve(sourceDir);
+  adaptedDir = resolve(adaptedDir);
+  guideDir = resolve(guideDir);
   const changes = loadManifests({ changesPath, manifestPaths });
-  // Output roots must not overlap.
-  const a = resolve(adaptedDir);
-  const g = resolve(guideDir);
-  if (a === g || a.startsWith(g + sep) || g.startsWith(a + sep)) {
+  // Canonical paths are only for the overlap check; retain normalized paths
+  // for staging and publication.
+  const a = canonicalOutputPath(adaptedDir);
+  const g = canonicalOutputPath(guideDir);
+  if (
+    a === g ||
+    a.startsWith(g.endsWith(sep) ? g : g + sep) ||
+    g.startsWith(a.endsWith(sep) ? a : a + sep)
+  ) {
     throw new GenerateError(
       `adaptedDir ${a} and guideDir ${g} must not overlap.`,
     );

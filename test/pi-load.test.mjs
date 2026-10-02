@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import {
+  cpSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   realpathSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -35,6 +38,27 @@ test("Pi loads the adapted package with no pstack name collisions (staged post-i
     includeDefaults: false,
   });
   assertNoAdaptedProblems(skills, diagnostics, adaptedNames());
+});
+
+test("Pi reports a how collision from an unrelated other/adapted/skills package", async () => {
+  const tmp = mkdtempSync(join(tmpdir(), "pi-collision-"));
+  const other = join(tmp, "other/adapted/skills/how");
+  mkdirSync(join(tmp, "other/adapted/skills"), { recursive: true });
+  cpSync(join(ADAPTED_SKILLS, "how"), other, { recursive: true });
+  const user = join(tmp, "user");
+  mkdirSync(user);
+  symlinkSync(other, join(user, "how"));
+  const staged = stageWithoutUpstreamPstack(user, adaptedNames());
+  const { loadSkills } = await resolvePi();
+  const { diagnostics } = loadSkills({
+    cwd: tmp,
+    agentDir: join(tmp, "agent"),
+    skillPaths: [ADAPTED_SKILLS, staged],
+    includeDefaults: false,
+  });
+  assert.ok(diagnostics.some((diagnostic) =>
+    diagnostic.type === "collision" && diagnostic.collision?.name === "how"
+  ), `expected a how collision, got ${JSON.stringify(diagnostics)}`);
 });
 
 // Offline SDK expansion probe: session.steer() expands /skill: commands into
