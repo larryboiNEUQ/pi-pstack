@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   copyFileSync,
@@ -18,6 +19,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { validateRoleCatalog } from "./role-guard.mjs";
 
 export const PINNED_COMMIT = "adf3218ca2f5b9971eedc07a76bef22df7701539";
 export const DEFAULT_REPO = join(
@@ -43,11 +45,13 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const DEFAULT_MANIFEST_PATHS = [
   join(REPO_ROOT, "adaptation/changes.json"),
   join(REPO_ROOT, "adaptation/host-changes.json"),
+  join(REPO_ROOT, "adaptation/setup-changes.json"),
 ];
 
 const OPS = new Set([
   "exclude",
   "replace",
+  "replace-file",
   "insert-before",
   "insert-after",
   "add-file",
@@ -111,10 +115,18 @@ export function loadManifests({ changesPath, manifestPaths } = {}) {
       throw new GenerateError(`Change ${change.id}: unknown op ${change.op}.`);
     }
     if (
-      ["replace", "insert-before", "insert-after"].includes(change.op) &&
+      ["replace", "replace-file", "insert-before", "insert-after"].includes(change.op) &&
       (typeof change.anchor !== "string" || change.anchor.length === 0)
     ) {
       throw new GenerateError(`Change ${change.id}: anchor must be a non-empty string.`);
+    }
+    if (
+      change.op === "replace-file" &&
+      (typeof change.expectedSha256 !== "string" || !/^[a-f0-9]{64}$/i.test(change.expectedSha256))
+    ) {
+      throw new GenerateError(
+        `Change ${change.id}: expectedSha256 must be a 64-character SHA-256 hex digest.`,
+      );
     }
   }
   return changes;
@@ -229,6 +241,25 @@ function resolveTarget(change, roots) {
   );
 }
 
+function resolveSource(change, base) {
+  const src = safeJoin(base, change.source, "source", change.id);
+  assertNoSymlinkComponent(base, src, change.id);
+  let st;
+  try {
+    st = lstatSync(src);
+  } catch {
+    throw new GenerateError(
+      `Change ${change.id}: source file ${src} does not exist.`,
+    );
+  }
+  if (st.isSymbolicLink() || !st.isFile()) {
+    throw new GenerateError(
+      `Change ${change.id}: source ${src} is not a regular file.`,
+    );
+  }
+  return src;
+}
+
 function applyChange(change, roots, sourceDir) {
   const path = resolveTarget(change, roots);
   const root = change.target.startsWith("upstream-guide/")
@@ -237,21 +268,7 @@ function applyChange(change, roots, sourceDir) {
   assertNoSymlinkComponent(root, path, change.id);
   if (change.op === "add-file" || change.op === "copy-upstream") {
     const base = change.op === "add-file" ? change.manifestDir : sourceDir;
-    const src = safeJoin(base, change.source, "source", change.id);
-    assertNoSymlinkComponent(base, src, change.id);
-    let st;
-    try {
-      st = lstatSync(src);
-    } catch {
-      throw new GenerateError(
-        `Change ${change.id}: source file ${src} does not exist.`,
-      );
-    }
-    if (st.isSymbolicLink() || !st.isFile()) {
-      throw new GenerateError(
-        `Change ${change.id}: source ${src} is not a regular file.`,
-      );
-    }
+    const src = resolveSource(change, base);
     if (existsSync(path) || isLink(path)) {
       throw new GenerateError(
         `Change ${change.id}: target ${path} already exists.`,
@@ -265,12 +282,31 @@ function applyChange(change, roots, sourceDir) {
       `Change ${change.id}: target file ${path} does not exist.`,
     );
   }
-  const content = readFileSync(path, "utf8");
+  const st = lstatSync(path);
+  if (!st.isFile()) {
+    throw new GenerateError(
+      `Change ${change.id}: target ${path} is not a regular file.`,
+    );
+  }
+  const bytes = readFileSync(path);
+  const content = bytes.toString("utf8");
   const n = countOccurrences(content, change.anchor);
   if (n !== 1) {
     throw new GenerateError(
       `Change ${change.id}: anchor ${JSON.stringify(change.anchor)} occurs ${n} times in ${path}; expected exactly 1.`,
     );
+  }
+  if (change.op === "replace-file") {
+    const actualSha256 = createHash("sha256").update(bytes).digest("hex");
+    if (actualSha256 !== change.expectedSha256.toLowerCase()) {
+      throw new GenerateError(
+        `Change ${change.id}: SHA-256 mismatch in ${path}; expected ${change.expectedSha256}, actual ${actualSha256}.`,
+      );
+    }
+    const src = resolveSource(change, change.manifestDir);
+    copyFileSync(src, path);
+    chmodSync(path, st.mode & 0o7777);
+    return;
   }
   let next;
   if (change.op === "replace") {
@@ -385,6 +421,13 @@ export function generate({
     if (!existsSync(p)) {
       throw new GenerateError(`Source tree is missing ${p}.`);
     }
+  }
+  if (changes.some((change) => change.id === "rewrite-setup-pstack")) {
+    validateRoleCatalog({
+      sourceDir,
+      catalogPath: join(REPO_ROOT, "adaptation/files/skills/poteto-mode/references/roles.json"),
+      defaultsPath: join(REPO_ROOT, "adaptation/files/skills/poteto-mode/references/default-models.md"),
+    });
   }
 
   const excluded = new Set();

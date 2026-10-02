@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -32,6 +34,12 @@ const EXCLUDED = ["make-bot-ui", "tdd", "teach"];
 // Extract the pinned snapshot once for all tests in this file.
 const snapshot = extractSnapshot(DEFAULT_REPO, PINNED_COMMIT);
 const defaultChanges = loadManifests({});
+const adaptationDir = dirname(DEFAULT_MANIFEST_PATHS[0]);
+const setupChange = JSON.parse(
+  readFileSync(join(adaptationDir, "setup-changes.json"), "utf8"),
+).changes[0];
+const setupSource = join(adaptationDir, setupChange.source);
+const upstreamSetup = join(snapshot, "pstack", setupChange.target);
 const CHANGED_TARGETS = new Set(
   defaultChanges.filter((c) => c.op !== "exclude").map((c) => c.target),
 );
@@ -155,6 +163,14 @@ test("every declared text change lands exactly once", () => {
     const base = change.target.startsWith("upstream-guide/")
       ? join(guideDir, change.target.slice("upstream-guide/".length))
       : join(adaptedDir, change.target);
+    if (change.op === "replace-file") {
+      assert.deepEqual(
+        readFileSync(base),
+        readFileSync(join(change.manifestDir, change.source)),
+        change.id,
+      );
+      continue;
+    }
     const content = readFileSync(base, "utf8");
     const n = content.split(change.text).length - 1;
     assert.equal(n, 1, `${change.id}: text occurs ${n} times in ${change.target}`);
@@ -302,6 +318,101 @@ test("a failed generation leaves the previous output untouched", () => {
   assert.equal(after, before);
 });
 
+test("default manifests are base, host, then setup (not path changes)", () => {
+  assert.deepEqual(
+    DEFAULT_MANIFEST_PATHS,
+    ["changes.json", "host-changes.json", "setup-changes.json"].map((file) =>
+      join(adaptationDir, file),
+    ),
+  );
+});
+
+test("setup-pstack is exactly the frozen template, without the Cursor rule write path", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  const path = join(adaptedDir, setupChange.target);
+  assert.deepEqual(readFileSync(path), readFileSync(setupSource));
+  assert.doesNotMatch(readFileSync(path, "utf8"), /pstack-models\.mdc|\.cursor\/rules/);
+  assert.match(frontmatter(path), /^disable-model-invocation: true$/m);
+});
+
+test("published role catalog covers every default-model row", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  const references = join(adaptedDir, "skills/poteto-mode/references");
+  const catalog = JSON.parse(readFileSync(join(references, "roles.json"), "utf8"));
+  const names = catalog.roles.map((role) => role.name).sort();
+  const defaults = readFileSync(join(references, "default-models.md"), "utf8")
+    .split(/\r?\n/)
+    .filter((line) => line.trim() && !line.startsWith("#"))
+    .map((line) => line.slice(0, line.indexOf(": ")))
+    .sort();
+  assert.deepEqual(defaults, names);
+});
+
+for (const [label, rel, mutate, errorPattern] of [
+  [
+    "unregistered setup role",
+    "pstack/skills/setup-pstack/SKILL.md",
+    (text) => {
+      const row = "feature, refactoring: grok-4.7-xhigh-fast";
+      assert.equal(text.split(row).length - 1, 1);
+      return text.replace(row, `unregistered probe: qwen-unknown\n${row}`);
+    },
+    /Unregistered role/,
+  ],
+  [
+    "unregistered how reference",
+    "pstack/skills/how/SKILL.md",
+    (text) => text + "\nUse the `unregistered probe` line in the pstack-models rule.\n",
+    /Unregistered role/,
+  ],
+  [
+    "non-role upstream setup drift",
+    "pstack/skills/setup-pstack/SKILL.md",
+    (text) => text + "\nupstream drift probe\n",
+    /rewrite-setup-pstack.*SHA-256 mismatch/s,
+  ],
+]) {
+  test(`${label} fails with its source path and preserves published outputs`, () => {
+    const src = mkdtempSync(join(tmpdir(), "setup-snapshot-"));
+    cpSync(snapshot, src, { recursive: true });
+    const path = join(src, rel);
+    writeFileSync(path, mutate(readFileSync(path, "utf8")));
+    const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+    const { adaptedDir, guideDir } = generateTo(tmp);
+    const before = treeFingerprint(adaptedDir) + treeFingerprint(guideDir);
+    assert.throws(
+      () => generateTo(tmp, src),
+      (error) => {
+        assert.match(error.message, errorPattern);
+        if (label.startsWith("unregistered")) {
+          assert.ok(error.message.includes("unregistered probe"));
+          assert.ok(error.message.includes(path));
+        } else {
+          assert.ok(error.message.includes(setupChange.target));
+          assert.ok(error.message.includes(setupChange.expectedSha256));
+          assert.ok(error.message.includes(createHash("sha256").update(readFileSync(path)).digest("hex")));
+        }
+        return true;
+      },
+    );
+    assert.equal(treeFingerprint(adaptedDir) + treeFingerprint(guideDir), before);
+    if (label.startsWith("unregistered")) {
+      const parent = join(tmp, "must-not-be-created");
+      assert.throws(
+        () => generate({
+          sourceDir: src,
+          adaptedDir: join(parent, "adapted"),
+          guideDir: join(parent, "guide"),
+        }),
+        errorPattern,
+      );
+      assert.ok(!existsSync(parent), "role validation must precede staging and copying");
+    }
+  });
+}
+
 // --- fixture source tests ---
 
 function buildFixture() {
@@ -353,6 +464,130 @@ function fixtureManifest(dir) {
   return p;
 }
 
+// Only frozen upstream/template bytes are used for whole-file fixtures.
+function setupFixture(overrides = {}) {
+  const { src, put } = buildFixture();
+  put("pstack/" + setupChange.target, readFileSync(upstreamSetup));
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const template = join(tmp, setupChange.source);
+  mkdirSync(dirname(template), { recursive: true });
+  cpSync(setupSource, template);
+  const change = { ...setupChange, id: "fixture-replace-setup", ...overrides };
+  const manifest = join(tmp, "manifest.json");
+  writeFileSync(manifest, JSON.stringify({ changes: [change] }));
+  return { src, tmp, template, change, manifest };
+}
+
+test("fixture: replace-file copies declared bytes and preserves the target mode", () => {
+  const { src, tmp, template, manifest } = setupFixture();
+  const upstream = join(src, "pstack", setupChange.target);
+  chmodSync(upstream, 0o751);
+  chmodSync(template, 0o640);
+  const { adaptedDir } = generateTo(tmp, src, { manifestPaths: [manifest] });
+  const output = join(adaptedDir, setupChange.target);
+  assert.deepEqual(readFileSync(output), readFileSync(setupSource));
+  assert.equal(statSync(output).mode & 0o777, 0o751);
+  assert.equal(statSync(template).mode & 0o777, 0o640);
+  assert.deepEqual(readFileSync(upstream), readFileSync(upstreamSetup));
+});
+
+test("fixture: replace-file hashes the current staged bytes, including earlier patches", () => {
+  const { src, tmp, manifest } = setupFixture();
+  const change = { ...setupChange, id: "fixture-replace-setup" };
+  const patch = {
+    id: "fixture-upstream-drift",
+    op: "insert-after",
+    target: setupChange.target,
+    anchor: setupChange.anchor,
+    text: "\nupstream drift probe\n",
+  };
+  writeFileSync(manifest, JSON.stringify({ changes: [patch, change] }));
+  assert.throws(
+    () => generateTo(tmp, src, { manifestPaths: [manifest] }),
+    /fixture-replace-setup.*SHA-256 mismatch/s,
+  );
+  const current = readFileSync(upstreamSetup, "utf8").replace(
+    patch.anchor, patch.anchor + patch.text,
+  );
+  change.expectedSha256 = createHash("sha256").update(current).digest("hex");
+  writeFileSync(manifest, JSON.stringify({ changes: [patch, change] }));
+  const { adaptedDir } = generateTo(tmp, src, { manifestPaths: [manifest] });
+  assert.deepEqual(
+    readFileSync(join(adaptedDir, change.target)),
+    readFileSync(setupSource),
+  );
+});
+
+for (const [label, overrides, pattern] of [
+  ["missing anchor", { anchor: "unregistered probe" }, /anchor.*occurs 0 times/s],
+  ["duplicated anchor", { anchor: "pstack" }, /anchor.*occurs (?:[2-9]|[1-9]\d+) times/s],
+  ["empty anchor", { anchor: "" }, /anchor must be a non-empty string/],
+  ["absent anchor", { anchor: undefined }, /anchor must be a non-empty string/],
+  ["hash mismatch", { expectedSha256: "0".repeat(64) }, /SHA-256 mismatch/],
+  ["missing hash", { expectedSha256: undefined }, /expectedSha256/],
+  ["malformed hash", { expectedSha256: "not-a-sha256" }, /expectedSha256/],
+  ["missing template", { source: "files/missing.md" }, /source file.*does not exist/s],
+  ["directory template", { source: "files/skills/setup-pstack" }, /source.*not a regular file/s],
+  ["empty template path", { source: "" }, /source is empty/],
+  ["source traversal", { source: "../outside.md" }, /source escapes its root/],
+  ["absolute source", { source: setupSource }, /source must be relative/],
+  ["target traversal", { target: "skills/../../escape.md" }, /target escapes its root/],
+  ["absolute target", { target: upstreamSetup }, /target.*must start with/s],
+  ["missing target", { target: "skills/setup-pstack/missing.md" }, /target file.*does not exist/s],
+  ["directory target", { target: "skills/setup-pstack" }, /target.*not a regular file/s],
+  ["unknown operation", { op: "replace-file-unknown" }, /unknown op/],
+]) {
+  test(`fixture: replace-file rejects ${label}`, () => {
+    const { src, tmp, change, manifest } = setupFixture(overrides);
+    assert.throws(
+      () => generateTo(tmp, src, { manifestPaths: [manifest] }),
+      (error) => {
+        assert.ok(error.message.includes(change.id));
+        assert.match(error.message, pattern);
+        return true;
+      },
+    );
+    assert.ok(!existsSync(join(tmp, "adapted")));
+    assert.ok(!existsSync(join(tmp, "upstream-guide")));
+  });
+}
+
+for (const location of ["source", "source-parent", "target", "target-parent"]) {
+  test(`fixture: replace-file rejects a symlinked ${location}`, () => {
+    const { src, tmp, manifest } = setupFixture();
+    const external = mkdtempSync(join(tmpdir(), "setup-external-"));
+    const sentinel = join(external, "SKILL.md");
+    cpSync(upstreamSetup, sentinel);
+    if (location === "source") {
+      symlinkSync(sentinel, join(tmp, "linked.md"));
+      writeFileSync(manifest, JSON.stringify({
+        changes: [{ ...setupChange, id: "fixture-replace-setup", source: "linked.md" }],
+      }));
+    } else if (location === "source-parent") {
+      symlinkSync(external, join(tmp, "linked"));
+      writeFileSync(manifest, JSON.stringify({
+        changes: [{ ...setupChange, id: "fixture-replace-setup", source: "linked/SKILL.md" }],
+      }));
+    } else if (location === "target") {
+      symlinkSync(sentinel, join(src, "pstack/skills/setup-pstack/linked.md"));
+      writeFileSync(manifest, JSON.stringify({
+        changes: [{ ...setupChange, id: "fixture-replace-setup", target: "skills/setup-pstack/linked.md" }],
+      }));
+    } else {
+      symlinkSync(external, join(src, "pstack/skills/setup-pstack/linked"));
+      writeFileSync(manifest, JSON.stringify({
+        changes: [{ ...setupChange, id: "fixture-replace-setup", target: "skills/setup-pstack/linked/SKILL.md" }],
+      }));
+    }
+    assert.throws(
+      () => generateTo(tmp, src, { manifestPaths: [manifest] }),
+      /fixture-replace-setup.*symlink/s,
+    );
+    assert.deepEqual(readFileSync(sentinel), readFileSync(upstreamSetup));
+    assert.deepEqual(readdirSync(external), ["SKILL.md"]);
+  });
+}
+
 test("fixture: happy path generates adapted package", () => {
   const { src } = buildFixture();
   const tmp = mkdtempSync(join(tmpdir(), "gen-"));
@@ -370,6 +605,16 @@ test("fixture: happy path generates adapted package", () => {
     readFileSync(join(guideDir, "README.md"), "utf8"),
     /^note\n\n# The pstack guide/,
   );
+});
+
+test("fixture: explicit base-only stack does not require upstream role tables", () => {
+  const { src } = buildFixture();
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp, src, {
+    manifestPaths: [DEFAULT_MANIFEST_PATHS[0]],
+  });
+  assert.match(frontmatter(join(adaptedDir, "skills/poteto-mode/SKILL.md")), /name: poteto-mode/);
+  assert.ok(!existsSync(join(adaptedDir, "skills/setup-pstack")));
 });
 
 test("fixture: add-file and copy-upstream ops land their bytes", () => {
