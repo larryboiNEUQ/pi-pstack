@@ -82,6 +82,8 @@
 49. 作为维护者，我想在实机冒烟中记录每家模型的实际模型和 thinking 档位，以便证明模型表生效。
 50. 作为维护者，我想让后置 playbook（babysit、shipping、opening-a-pr、autonomous-run、orchestrate、autopilot）在确认 gh 和 Bun 可用后再验证，以便不阻塞主要工作流。
 
+后置验收按用户后续确认复用已创建的 PR #1：Opening a PR 的本地门禁在隔离 fixture 中运行，Babysit 与 Shipping 只读该 PR；不新建测试分支或第二条 PR，不把未重复执行的创建 PR 步骤当作本轮通过。
+
 ## Implementation Decisions
 
 ### 内容源
