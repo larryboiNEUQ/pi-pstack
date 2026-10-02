@@ -6,7 +6,7 @@
 
 当前清单栈依次启用 `adaptation/changes.json`、`host-changes.json`、`path-changes.json`、`setup-changes.json`，共 45 条改动；路径适配和整篇重写的 setup-pstack 均已生效。Issue 02 的子代理四模型/thinking/回退实机冒烟已通过；Issue 06 的模型建议、确认写入和备份验收在隔离 fixture 中通过，真实用户配置未改动。Issue 05（含续跑与 UI 截图能力告诫）、07（含 Claude 门禁兜底与评委续跑告诫）、08（用户批准的 PR 复用范围，含 Goal PTY 续跑与 print 模式失败记录）的实机验收均已完成。
 
-公开仓库 <https://github.com/larryboiNEUQ/pi-pstack>，完整适配在 `pstack-pi-full-spec` 分支和 [draft PR #1](https://github.com/larryboiNEUQ/pi-pstack/pull/1) 中推进。仓库名不表示它是 npm 上同名 `pi-pstack` 社区包的镜像或 fork。
+公开仓库 <https://github.com/larryboiNEUQ/pi-pstack>，完整适配位于 `pstack-pi-full-spec` 分支和 [PR #1](https://github.com/larryboiNEUQ/pi-pstack/pull/1)。仓库名不表示它是 npm 上同名 `pi-pstack` 社区包的镜像或 fork。
 
 ## 生成与测试
 
@@ -16,6 +16,8 @@
 - `npm run test:installed`：安装后验证——用 Pi `loadSkills` 加载真实 `~/.agents/skills`（含 `~/.pi/agent/skills` 默认目录），断言 47 个适配技能的 canonical 路径都落在 `adapted/`、无重名诊断、用户自有 tdd/teach 不受影响、make-bot-ui 不可加载。只检查目录加载，不覆盖扩展包内技能。
 
 当前未配置 CI，CI 证据记为不可用；本地通过不等于 CI 通过。
+
+最终两轴审查没有发现硬性 Standards 违规；Spec 的外部 tdd/teach 查找、嵌套评委家族选择和教程安装说明已修复。`4029000` 的 13 项定向回归通过，且重新生成的技能与教程在字节、模式和链接目标上与提交内容一致；没有把这次定向验证说成新的全量测试。
 
 ## Model Defaults 与后续维护
 

@@ -12,7 +12,7 @@
 **Blocked by:** 06
 
 **Status:** ready-for-agent
-**Completion:** complete（2026-10-02；lead 已提交新 pin，独立 worktree 生成无 diff，第一层/第二层通过；本次文档待 lead 审查提交）
+**Completion:** complete（2026-10-02；新 pin 与文档已审查提交，独立 worktree 生成无 diff，第一层/第二层通过）
 
 - [x] 新的固定提交和 pstack 版本已记录
 - [x] 每个失效锚点都有处理结论：更新锚点、删除改动，或新增改动（无失效锚点，无需修复）
