@@ -34,6 +34,8 @@ Use `run_in_background: true` for top-level agents. Continue independent work un
 
 Nested delegates are a host exception: Tintinweb ties their lifetime to the parent subagent. Keep nested delegates foreground and finish them before their parent returns. Do not leave detached grandchildren.
 
+Nested delegation is opt-in in Tintinweb, even for agents with inherited extension tools. The packaged poteto-agent allows the three pstack agent types; comment-sicko allows pstack-readonly and poteto-agent for its how/why checks. The readonly agent has no delegation tools. Respect the host depth limit.
+
 For concurrent writers, use `isolation: "worktree"`. Commit inputs before spawning: a worktree cannot see uncommitted edits. Preserve returned branch/commit pointers, review each diff, then integrate accepted changes. A cloud agent URL is not a local session identifier.
 
 The readonly agent exposes only read, bash, grep, find, and ls. Its bash usage is limited by instructions to read-only inspection. This is not an OS sandbox: the absence of write/edit tools does not make unrestricted shell execution safe.
