@@ -1,0 +1,13 @@
+{
+  "changes": [
+    {
+      "id": "rewrite-setup-pstack",
+      "op": "replace-file",
+      "target": "skills/setup-pstack/SKILL.md",
+      "anchor": "# Setup pstack",
+      "expectedSha256": "125dd0c8f588782cfb271efae8f97a0719e43e79f56b3495c095f460bcee6389",
+      "source": "files/skills/setup-pstack/SKILL.md",
+      "reason": "Replace Cursor rule installation with approved Pi role-table maintenance; require review when upstream setup text changes."
+    }
+  ]
+}

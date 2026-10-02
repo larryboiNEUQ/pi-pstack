@@ -44,7 +44,7 @@ Read `~/.pi/agent/pstack/models.md` before the first role-based spawn in a task.
 
 - A line is `<role label>: <provider/model>:<thinking>`, or a comma-separated list of model values. Match the full role label; commas in a label are not multiple lines.
 - Split only the final thinking suffix from each model value. Pass `model: "provider/model"` and `thinking: "level"` as separate Agent fields.
-- A missing role, `auto`, or `inherit-parent` uses the current parent conversation model. Omit model and thinking for inheritance; do not substitute the global settings default.
+- A missing role, `auto`, or `inherit-parent` uses the current parent conversation model. Omit model; do not substitute the global settings model default. If the parent's current thinking is known, pass it explicitly. Otherwise omit thinking and report the host's effective level rather than claiming live thinking inheritance.
 - Agent files deliberately contain no model or thinking. Leave existing Explore, worker, reviewer, general-purpose, and Plan definitions unchanged.
 - Validate each explicit provider/model against the current authenticated model list from `pi --list-models`. Exact identity matters. Do not rely on fuzzy matching or cross-provider substitution.
 - Inspect the returned effective model and thinking. A silent provider/model substitution is not a successful configured-model run.
@@ -61,7 +61,7 @@ The adapter-only slice roles are recall slices, automate-me slices, verification
 
 1. Preserve the failed seat's requested model, effective model if known, error, and partial output.
 2. For quota exhaustion, rate limits, unavailable models, or an effective-model mismatch, retry that seat once on the current main conversation model.
-3. Start a fresh Agent without resume. Omit model and thinking so the model follows the parent. Carry forward the original scope and useful partial evidence, not a claim that the first run succeeded.
+3. Start a fresh Agent without resume. Omit model so it follows the parent. Pass the parent's current thinking when known; otherwise inspect and report the host-selected thinking level. Carry forward the original scope and useful partial evidence, not a claim that the first run succeeded.
 4. Report requested model, fallback model, failure reason, and any loss of panel diversity. If the inherited retry fails, report the seat incomplete.
 
 This rule overrides all upstream instructions to retry on a same-family default, use Sonnet, select a closest slug from an error, or use Claude when no family matches. Do not change the persistent model table during fallback. Host-internal transport retries may happen first; do not invent their count or claim an unobserved 429.

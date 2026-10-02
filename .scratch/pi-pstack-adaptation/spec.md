@@ -252,7 +252,7 @@ show-me-your-work auditor: xai/grok-4.7:xhigh, openai/gpt-6.1-sol:xhigh, devin/c
 - Pi extension、社区 Pi 移植、第二套子代理 runner。
 - 修改 Pi settings、已装插件、默认模型或现有角色文件。
 - npm 发布、包名、远程仓库。
-- 跟进上游最新版本（另开 Issue）。
+- 首轮接入不切换上游版本。现有 Issue 09 单独负责最新版本检查和更新。
 
 ## Further Notes
 
@@ -261,8 +261,9 @@ show-me-your-work auditor: xai/grok-4.7:xhigh, openai/gpt-6.1-sol:xhigh, devin/c
 - 保留原文：全部原则技能、playbook 步骤与路由、how、why、architect、arena、interrogate、swarm、reflect 的流程。
 - 平台替换：见映射说明表。
 - 删除：见 Out of Scope 前五项。
-- 减弱：claude 只在 interrogate 中出现；arena 和 architect 的 claude 席位改为 swe-2；thinking 最高为 xhigh，没有 max 和 fast；reflect、recall 读取的会话格式不同；swarm 并行规模受本机和额度限制；清单没有界面。
-- 新增：按订阅分配模型；回退规则；setup-pstack 读取订阅档案并检测新模型；锚点检查。
+- 平台限制：本适配将 Cursor max 映射为 xhigh，fast 不作为单独模型身份；这不表示 Pi 宿主完全没有 max 档。reflect、recall 的会话格式不同；swarm 并行规模受本机和额度限制；清单没有专用界面。
+- 模型策略：保留上游主要角色的 Claude/GPT/Grok 家族；how explorer 和 why investigators 使用用户确认的 GPT 例外；新增机械分片使用 swe-2。指定模型失败时只回退主模型。
+- 新增：setup-pstack 可按订阅提出重新分配建议，检测新模型；统一回退规则；锚点检查。
 
 ### 未验证项
 
