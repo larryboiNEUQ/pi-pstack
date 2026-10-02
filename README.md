@@ -2,7 +2,7 @@
 
 面向 Pi 的 pstack 适配包仓库。
 
-本仓库从固定的上游 pstack 快照生成 Pi 版技能（适配包），复用本机 Tintinweb 子代理系统，只支持显式调用。适配包已生成并安装：47 个技能链接到 `adapted/skills/`，三个子代理（poteto-agent、pstack-readonly、comment-sicko，含嵌套委派 allowlist）与模型表/订阅档案种子已安装到 `~/.pi/agent/`。本分支按 spec 逐步推进整个任务图；`adaptation/path-changes.json`、`setup-changes.json` 是已冻结的后续 Issue 输入，当前清单栈未启用。多模型/thinking/回退的实机冒烟仍待网络授权。仓库名不表示它是 npm 上同名 `pi-pstack` 社区包的镜像或 fork。
+本仓库从固定的上游 pstack 快照生成 Pi 版技能（适配包），复用本机 Tintinweb 子代理系统，只支持显式调用。适配包已生成并安装：47 个技能链接到 `adapted/skills/`，三个子代理（poteto-agent、pstack-readonly、comment-sicko，含嵌套委派 allowlist）与模型表/订阅档案种子已安装到 `~/.pi/agent/`。本分支按 spec 逐步推进整个任务图；`adaptation/path-changes.json`、`setup-changes.json` 是已冻结的后续 Issue 输入，当前清单栈未启用。子代理四模型/thinking/回退实机冒烟已通过（Issue 02 完成）；后续各 workflow 技能的实机验证仍在进行。公开仓库 <https://github.com/larryboiNEUQ/pi-pstack>，当前改动见 draft PR #1。仓库名不表示它是 npm 上同名 `pi-pstack` 社区包的镜像或 fork。
 
 ## 生成与测试
 
@@ -29,7 +29,7 @@
 
 ## 已确认的工程约定
 
-- 独立本地 Git 仓库，默认分支为 `main`。尚未配置 remote。
+- GitHub 公开仓库为 `larryboiNEUQ/pi-pstack`，默认分支为 `main`；完整适配在 `pstack-pi-full-spec` 分支和 draft PR #1 中推进。
 - Issues 和 specs 使用本地 Markdown，放在 `.scratch/<feature>/`。
 - 使用默认 triage labels。
 - 使用单一 root `CONTEXT.md` 和 `docs/adr/`。
@@ -44,7 +44,7 @@
 
 ## 尚未决定
 
-插件发布名称、许可证和远程仓库。当前只供本机使用，不发布。
+插件发布名称和本仓库新增代码的许可证。源码仓库已公开；当前不发布 npm 包。
 
 ## 配置边界
 

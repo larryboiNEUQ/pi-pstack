@@ -13,16 +13,16 @@
 **Blocked by:** 01
 
 **Status:** ready-for-agent
-**Completion:** pending-live-verification（本地接入已实现；实机项尚未完成）
+**Completion:** complete（2026-10-02；实机验收通过，429 项按记录未触发）
 
 - [x] 第一层测试覆盖新增的插入行：每处存在且只出现一次
 - [x] 修改用户级 agent 目录和 pstack 配置目录前取得用户明确授权
-- [ ] 实机：swe-2、gpt、grok、claude 各起一个子代理，记录每个的实际模型和 thinking 档位，与模型表一致
-- [ ] 实机：pstack-readonly 子代理没有写文件工具
-- [ ] 实机：指定一个不可用的模型，回退规则执行，回复中写明原定模型、实际模型和原因
-- [ ] 实机：记录不传 thinking 时子代理的实际档位
-- [ ] 实机：确认 Tintinweb 按文件名还是 frontmatter 名称识别 agent 类型，必要时修正 agent 文件
-- [ ] 记录子代理遇到 429 时 Pi 是否先自动重试；无法触发时写明未验证
+- [x] 实机：swe-2、gpt、grok、claude 各起一个子代理，记录每个的实际模型和 thinking 档位，与模型表一致
+- [x] 实机：pstack-readonly 子代理没有写文件工具
+- [x] 实机：指定一个不可用的模型，回退规则执行，回复中写明原定模型、实际模型和原因
+- [x] 实机：记录不传 thinking 时子代理的实际档位
+- [x] 实机：确认 Tintinweb 按文件名还是 frontmatter 名称识别 agent 类型，必要时修正 agent 文件
+- [x] 记录子代理遇到 429 时 Pi 是否先自动重试；无法触发时写明未验证
 - [x] 现有 Explore、worker、reviewer、general-purpose、Plan 文件未被修改
 - [x] 证据记录在本 Issue 的 Comments 中
 
@@ -38,4 +38,15 @@
 - `npm run test:installed`（stable 检出）：47 个适配名 canonical 落 `adapted/`，无重名，tdd/teach 不受影响，make-bot-ui 缺席。日志 `issue02-test-installed.log`。
 - 429 自动重试行为：未验证（需实机触发）。
 
-剩余实机项（4 家模型/thinking/回退/readonly 运行时无写工具/嵌套实跑）等用户网络授权后进行。未执行的项目不算完成。
+历史状态：当时剩余实机项等待网络授权。下方实机验收记录已取代这一状态；未执行的项目不算完成。
+### 2026-10-02 实机验收（通过，lead 核查原始事件后判定）
+
+验收依据为 `Agent` 返回的子代理 `.output` JSONL 原始事件而非父代理自述；完整记录见 `/tmp/pi-pstack-full-spec-evidence/issue02-lead-verdict.md` 与 `live-20261002-191327/`。
+
+- 四个后台 `pstack-readonly` 子代理均完成且实测身份与请求一致：openai/gpt-6.1-sol·xhigh、xai/grok-4.7·xhigh、devin/claude-opus-5.5·xhigh、devin/swe-2·medium。
+- 子代理实际工具仅为 read/bash/grep/find/ls，extensions 关闭，无任何写/编辑/委派工具调用；bash 只读约束为指令级而非沙箱。
+- 不传 thinking 的子代理在父代理 high 档位下实际运行 GPT·medium，即回落到全局默认而非继承父档位（已按实测记录）。
+- 不可用 provider/model 返回 `Model not found`；随后新建未 pin 的 GPT 子代理以显式 high 完成并返回 FALLBACK_PROBE；未使用 resume，未改持久表。
+- 8 个 agent 文件哈希前后一致；`settings.json` 指纹发生变化——因未留存变更前内容，无法确定被改字段与写入方，不声称配置未变；当前选中项仍为 openai/gpt-6.1-sol/medium。原文件已保留。
+- 观察到一次连接错误的自动重试并成功；未触发真实 429，按本项允许记为"未验证"。
+- 原始会话 JSONL 与 provider 签名属私有材料，不进公开仓库。
