@@ -4,7 +4,7 @@
 
 本仓库从固定的上游 pstack 快照生成 Pi 版技能（适配包），复用本机 Tintinweb 子代理系统，只支持显式调用。适配包已生成并安装：47 个技能链接到 `adapted/skills/`，三个子代理（poteto-agent、pstack-readonly、comment-sicko，含嵌套委派 allowlist）与模型表/订阅档案种子已安装到 `~/.pi/agent/`。
 
-当前清单栈依次启用 `adaptation/changes.json`、`host-changes.json`、`path-changes.json`、`setup-changes.json`，共 45 条改动；路径适配和整篇重写的 setup-pstack 均已生效。Issue 02 的子代理四模型/thinking/回退实机冒烟已通过；Issue 06 的模型建议、确认写入和备份验收在隔离 fixture 中通过，真实用户配置未改动。Issue 05 的 playbook 实机验收（含续跑与 UI 截图能力告诫）已通过；Issue 07 的多模型对抗流程验收（含 Claude 门禁兜底与评委续跑告诫）已通过；Issue 08 仍未完成，不由上述结果推定通过。
+当前清单栈依次启用 `adaptation/changes.json`、`host-changes.json`、`path-changes.json`、`setup-changes.json`，共 45 条改动；路径适配和整篇重写的 setup-pstack 均已生效。Issue 02 的子代理四模型/thinking/回退实机冒烟已通过；Issue 06 的模型建议、确认写入和备份验收在隔离 fixture 中通过，真实用户配置未改动。Issue 05（含续跑与 UI 截图能力告诫）、07（含 Claude 门禁兜底与评委续跑告诫）、08（用户批准的 PR 复用范围，含 Goal PTY 续跑与 print 模式失败记录）的实机验收均已完成。
 
 公开仓库 <https://github.com/larryboiNEUQ/pi-pstack>，完整适配在 `pstack-pi-full-spec` 分支和 [draft PR #1](https://github.com/larryboiNEUQ/pi-pstack/pull/1) 中推进。仓库名不表示它是 npm 上同名 `pi-pstack` 社区包的镜像或 fork。
 
@@ -55,9 +55,9 @@
 - 生成的适配包提交进本仓库。
 - 测试分三层：生成器、Pi 技能加载、实机冒烟。
 
-## 尚未决定
+## 发布范围
 
-插件发布名称和本仓库新增代码的许可证。源码仓库已公开；当前不发布 npm 包。
+源码仓库已公开；当前不发布 npm 包。本仓库新增代码尚未指定许可证；上游技能及教程保留其原有 LICENSE，不将上游许可范围扩展为本仓库全部代码。
 
 ## 配置边界
 

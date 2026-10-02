@@ -239,7 +239,7 @@ show-me-your-work auditor: xai/grok-4.7:xhigh, openai/gpt-6.1-sol:xhigh, devin/c
 
 ### 第三层：实机冒烟
 
-- 在真实 Pi 会话中运行，不能自动化。证据记录在对应 Issue 的 Comments 中。
+- 必须在真实 Pi 会话中运行；可用受限 CLI 或 PTY 驱动组织调用，但不得以离线 SDK 展开冒充真实模型执行。证据记录在对应 Issue 的 Comments 中。
 - 每家模型（swe-2、gpt、grok、claude）各起一个子代理。记录实际模型和 thinking 档位。
 - 故意指定一个不可用的模型，确认回退规则执行并在回复中写明。
 - 确认不传 thinking 时子代理的实际档位。
@@ -253,7 +253,7 @@ show-me-your-work auditor: xai/grok-4.7:xhigh, openai/gpt-6.1-sol:xhigh, devin/c
 - make-bot-ui。
 - Pi extension、社区 Pi 移植、第二套子代理 runner。
 - 修改 Pi settings、已装插件、默认模型或现有角色文件。
-- npm 发布、包名、远程仓库。
+- npm 发布和发布包名。远程仓库与 draft PR 已由用户后续明确授权创建；后置验收复用该 PR，不新增测试远端资源。
 - 首轮接入不切换上游版本。现有 Issue 09 单独负责最新版本检查和更新。
 
 ## Further Notes
@@ -267,10 +267,13 @@ show-me-your-work auditor: xai/grok-4.7:xhigh, openai/gpt-6.1-sol:xhigh, devin/c
 - 模型策略：保留上游主要角色的 Claude/GPT/Grok 家族；how explorer 和 why investigators 使用用户确认的 GPT 例外；新增机械分片使用 swe-2。指定模型失败时只回退主模型。
 - 新增：setup-pstack 可按订阅提出重新分配建议，检测新模型；统一回退规则；锚点检查。
 
-### 未验证项
+### 验证结果与限制
 
-1. swe-2 能否在 Tintinweb 子代理中正常启动，thinking 档位是否生效。
-2. 不传 thinking 时，子代理使用主对话实时档位还是全局默认档位。
-3. 子代理遇到 429 时，Pi 是否先自动重试。
-4. Tintinweb 按 agent 文件名还是 frontmatter 名称识别 agent 类型。
-5. 现有 Explore、worker、reviewer 引用的 openai-codex 模型不在当前模型列表中。本 spec 不处理。
+1. Issue 02 实机确认 SWE-2 可启动且实际 thinking 为 medium；其余三家身份与 thinking 也有当次真实记录，不推断永久可用性。
+2. 省略 thinking 的子代理实际使用 medium，而非父对话实时 high。已知 root thinking 应显式传递，否则报告实际档位。
+3. 真实 429 未触发；不声称已验证 Pi 的 429 自动重试策略。
+4. 实际 Tintinweb loader 确认 frontmatter 名称优先；三个新 agent 无冲突。
+5. 既有 Explore、worker、reviewer 的 openai-codex 引用不在本迁移改动范围，未改这些角色。
+6. 后续 Claude 请求出现版本门禁并按主模型回退；不是配额错误，未升级或修改已装 provider。
+7. Ego 原生 DOM 交互通过，但截图接口在本机超时；没有图像证明声明。
+8. `/goal` 交互式实机完成；print-mode 探针的事件边界错误与驱动过早提交均保留为失败记录。测试终端由 harness 收尾，不声称 CLI 自然退出。
