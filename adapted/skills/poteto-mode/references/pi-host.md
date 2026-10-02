@@ -38,6 +38,8 @@ Nested delegation is opt-in in Tintinweb, even for agents with inherited extensi
 
 For concurrent writers, use `isolation: "worktree"`. Commit inputs before spawning: a worktree cannot see uncommitted edits. Preserve returned branch/commit pointers, review each diff, then integrate accepted changes. A cloud agent URL is not a local session identifier.
 
+For swarm writers, let Tintinweb create the worktrees through each Agent call's `isolation: "worktree"`. Do not substitute a manually created worktree plus `isolation: "off"`. If the host disables native isolation, report that capability gap before spawning writers. Do not pass Cursor-only `cloud_base_branch`; prepare and commit the local base before spawning.
+
 The readonly agent exposes only read, bash, grep, find, and ls. Its bash usage is limited by instructions to read-only inspection. This is not an OS sandbox: the absence of write/edit tools does not make unrestricted shell execution safe.
 
 ## Models And Thinking
@@ -62,7 +64,7 @@ The adapter-only slice roles are recall slices, automate-me slices, verification
 ## Failure And Fallback
 
 1. Preserve the failed seat's requested model, effective model if known, error, and partial output.
-2. For quota exhaustion, rate limits, unavailable models, or an effective-model mismatch, retry that seat once on the current main conversation model.
+2. For a model/provider startup failure (including authentication or version gates), quota exhaustion, rate limits, unavailable models, or an effective-model mismatch, retry that seat once on the current main conversation model. Preserve a version-gate error as such; do not relabel it as quota exhaustion or update installed providers without approval.
 3. Start a fresh Agent without resume. Omit model so it follows the parent. Pass the parent's current thinking when known; otherwise inspect and report the host-selected thinking level. Carry forward the original scope and useful partial evidence, not a claim that the first run succeeded.
 4. Report requested model, fallback model, failure reason, and any loss of panel diversity. If the inherited retry fails, report the seat incomplete.
 
@@ -100,6 +102,8 @@ Pi JSONL lines are typed session entries, not all chat messages. For conversatio
 Recall searches only the workspace and time range the user approved. Reflect and show-me-your-work audit only the identified run. If the active session path is unavailable, ask for it or report incomplete; do not scan every project's private sessions.
 
 ## Limits And Authority
+
+Never dump the environment, enumerate environment values by substring, or read credential files to identify a model or diagnose a provider failure. A filter for `PI_` also matches `API_KEY`. Obtain effective model/thinking from returned host records, not environment inspection. Workers report task evidence; the parent records identities. Do not print API keys, tokens, cookies, or authorization headers. If a secret is accidentally printed, stop, keep raw evidence private, report only its variable name, and ask the user about rotation.
 
 The package does not implement Cursor cloud execution, persistent mode, background routing of the root chat, make-bot-ui, Benny, webhooks, or Cursor automation.
 
