@@ -5,6 +5,12 @@ const RESERVED_RULE_KEYS = new Set(["description", "alwaysApply", "name", "model
 const THINKING = "off|minimal|low|medium|high|xhigh|max";
 const PI_MODEL = new RegExp(`^[^/\\s:,]+/[^\\s:,]+:(${THINKING})$`);
 
+function parseRoleRow(line) {
+  const separator = line.indexOf(": ");
+  if (separator < 1) return undefined;
+  return { name: line.slice(0, separator), values: line.slice(separator + 2) };
+}
+
 function markdownFiles(root) {
   const files = [];
   for (const entry of readdirSync(root, { withFileTypes: true })) {
@@ -37,14 +43,14 @@ export function validateRoleCatalog({ sourceDir, catalogPath, defaultsPath }) {
   const defaultNames = new Set();
   for (const line of readFileSync(defaultsPath, "utf8").split(/\r?\n/)) {
     if (!line.trim() || line.startsWith("#")) continue;
-    const separator = line.indexOf(": ");
-    if (separator < 1) throw new Error(`Invalid model row in ${defaultsPath}: ${line}`);
-    const name = line.slice(0, separator);
+    const row = parseRoleRow(line);
+    if (!row) throw new Error(`Invalid model row in ${defaultsPath}: ${line}`);
+    const { name, values } = row;
     if (!names.has(name) || defaultNames.has(name)) {
       throw new Error(`Unknown or duplicate model role ${JSON.stringify(name)} in ${defaultsPath}`);
     }
     defaultNames.add(name);
-    for (const model of line.slice(separator + 2).split(",").map((value) => value.trim())) {
+    for (const model of values.split(",").map((value) => value.trim())) {
       if (!["auto", "inherit-parent"].includes(model) && !PI_MODEL.test(model)) {
         throw new Error(`Invalid Pi model ${JSON.stringify(model)} for ${name} in ${defaultsPath}`);
       }
@@ -67,9 +73,9 @@ export function validateRoleCatalog({ sourceDir, catalogPath, defaultsPath }) {
       continue;
     }
     if (!line.trim() || line.startsWith("#")) continue;
-    const separator = line.indexOf(": ");
-    if (separator < 1) throw new Error(`Unrecognized upstream role row in ${setupPath}: ${line}`);
-    const name = line.slice(0, separator);
+    const row = parseRoleRow(line);
+    if (!row) throw new Error(`Unrecognized upstream role row in ${setupPath}: ${line}`);
+    const { name } = row;
     if (inRuleHeader && RESERVED_RULE_KEYS.has(name)) continue;
     if (!names.has(name) || !catalog.upstreamRoles.includes(name)) {
       throw new Error(`Unregistered role ${JSON.stringify(name)} in ${setupPath}`);

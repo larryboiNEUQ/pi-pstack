@@ -19,6 +19,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { test } from "node:test";
 
+import { validateRoleCatalog } from "../scripts/role-guard.mjs";
 import {
   DEFAULT_MANIFEST_PATHS,
   DEFAULT_REPO,
@@ -56,6 +57,11 @@ function walkFiles(root) {
   };
   walk(root);
   return out.sort();
+}
+
+function assertChangeOccursOnce(content, change) {
+  const occurrences = content.split(change.text).length - 1;
+  assert.equal(occurrences, 1, `${change.id}: text occurs ${occurrences} times in ${change.target}`);
 }
 
 function assertTreesIdentical(a, b) {
@@ -254,8 +260,7 @@ test("every declared text change lands exactly once", () => {
       continue;
     }
     const content = readFileSync(base, "utf8");
-    const n = content.split(change.text).length - 1;
-    assert.equal(n, 1, `${change.id}: text occurs ${n} times in ${change.target}`);
+    assertChangeOccursOnce(content, change);
   }
 });
 
@@ -441,12 +446,7 @@ test("every declared path change lands once and replace anchors are gone", () =>
   for (const change of pathChanges) {
     const file = join(adaptedDir, change.target);
     const content = readFileSync(file, "utf8");
-    const occurrences = content.split(change.text).length - 1;
-    assert.equal(
-      occurrences,
-      1,
-      `${change.id}: text occurs ${occurrences} times in ${change.target}`,
-    );
+    assertChangeOccursOnce(content, change);
     if (change.op === "replace") {
       assert.ok(
         !content.includes(change.anchor),
@@ -1011,6 +1011,53 @@ test("fixture: traversal and absolute sources/targets are rejected", () => {
       change.id,
     );
   }
+});
+
+test("role guard rejects a defaults row missing the name/model separator", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "roleguard-"));
+  const catalogPath = join(
+    adaptationDir, "files/skills/poteto-mode/references/roles.json",
+  );
+  const defaultsPath = join(tmp, "default-models.md");
+  cpSync(
+    join(adaptationDir, "files/skills/poteto-mode/references/default-models.md"),
+    defaultsPath,
+  );
+  const row = "feature, refactoring: xai/grok-4.7:xhigh";
+  const bad = "feature, refactoring:xai/grok-4.7:xhigh";
+  const text = readFileSync(defaultsPath, "utf8");
+  assert.ok(text.includes(row), "expected defaults row in the frozen source");
+  writeFileSync(defaultsPath, text.replace(row, bad));
+  assert.throws(
+    () =>
+      validateRoleCatalog({ sourceDir: snapshot, catalogPath, defaultsPath }),
+    new Error(`Invalid model row in ${defaultsPath}: ${bad}`),
+  );
+});
+
+test("role guard rejects an upstream setup row missing the name/model separator", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "roleguard-"));
+  const sourceDir = join(tmp, "source");
+  cpSync(join(snapshot, "pstack"), join(sourceDir, "pstack"), {
+    recursive: true,
+  });
+  const catalogPath = join(
+    adaptationDir, "files/skills/poteto-mode/references/roles.json",
+  );
+  const defaultsPath = join(
+    adaptationDir, "files/skills/poteto-mode/references/default-models.md",
+  );
+  const setupPath = join(sourceDir, "pstack/skills/setup-pstack/SKILL.md");
+  const row = "feature, refactoring: grok-4.7-xhigh-fast";
+  const bad = "feature, refactoring:grok-4.7-xhigh-fast";
+  const text = readFileSync(setupPath, "utf8");
+  assert.ok(text.includes(row), "expected upstream setup row in the snapshot");
+  writeFileSync(setupPath, text.replace(row, bad));
+  assert.throws(
+    () =>
+      validateRoleCatalog({ sourceDir, catalogPath, defaultsPath }),
+    new Error(`Unrecognized upstream role row in ${setupPath}: ${bad}`),
+  );
 });
 
 test("playbook Pi hints precede the real heading and sit outside code fences", () => {
