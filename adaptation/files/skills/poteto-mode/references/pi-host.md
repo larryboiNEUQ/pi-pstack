@@ -48,7 +48,7 @@ Read `~/.pi/agent/pstack/models.md` before the first role-based spawn in a task.
 
 - A line is `<role label>: <provider/model>:<thinking>`, or a comma-separated list of model values. Match the full role label; commas in a label are not multiple lines.
 - Split only the final thinking suffix from each model value. Pass `model: "provider/model"` and `thinking: "level"` as separate Agent fields.
-- A missing role, `auto`, or `inherit-parent` uses the current parent conversation model. Omit model; do not substitute the global settings model default. If the parent's current thinking is known, pass it explicitly. Otherwise omit thinking and report the host's effective level rather than claiming live thinking inheritance.
+- A missing role, `auto`, or `inherit-parent` uses the root main conversation model. At the root, omit model; inside a delegate, pass the recorded `root-main` provider/model explicitly, or return to the root if that context is missing. Never substitute the global settings default or the immediate delegate's role model. Pass known root thinking explicitly; otherwise report the host's effective level rather than claiming live thinking inheritance.
 - Agent files deliberately contain no model or thinking. Leave existing Explore, worker, reviewer, general-purpose, and Plan definitions unchanged.
 - Validate each explicit provider/model against the current authenticated model list from `pi --list-models`. Exact identity matters. Do not rely on fuzzy matching or cross-provider substitution.
 - Inspect the returned effective model and thinking. A silent provider/model substitution is not a successful configured-model run.
