@@ -1,65 +1,27 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdtempSync,
   realpathSync,
-  readdirSync,
-  symlinkSync,
+  writeFileSync,
 } from "node:fs";
-import { homedir, tmpdir } from "node:os";
-import { join, resolve, sep } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 
-const REPO_ROOT = resolve(fileURLToPath(import.meta.url), "../..");
-const ADAPTED_SKILLS = join(REPO_ROOT, "adapted/skills");
-const UPSTREAM_PSTACK = realpathSync(
-  join(homedir(), ".agents/repos/cursor-plugins/pstack"),
-);
-const AGENTS_SKILLS = join(homedir(), ".agents/skills");
-const PI_AGENT_SKILLS = join(homedir(), ".pi/agent/skills");
+import {
+  ADAPTED_SKILLS,
+  AGENTS_SKILLS,
+  PI_AGENT_DIR,
+  PI_AGENT_SKILLS,
+  REPO_ROOT,
+  adaptedNames,
+  assertNoAdaptedProblems,
+  resolvePi,
+  stageWithoutUpstreamPstack,
+} from "./helpers.mjs";
 
-function resolvePi() {
-  let root;
-  try {
-    root = execFileSync("npm", ["root", "-g"], { encoding: "utf8" }).trim();
-  } catch {
-    throw new Error("Cannot locate global npm root; is npm installed?");
-  }
-  const pkg = join(root, "@earendil-works/pi-coding-agent");
-  const entry = join(pkg, "dist/index.js");
-  if (!existsSync(entry)) {
-    throw new Error(
-      `Pi package not found at ${pkg}; cannot run the skill-loading test.`,
-    );
-  }
-  return import(pathToFileURL(entry).href);
-}
-
-function isUnder(child, root) {
-  const r = realpathSync(child);
-  return r === root || r.startsWith(root + sep);
-}
-
-// Stage a copy of a skills dir as symlinks, dropping entries whose real
-// target is the old upstream pstack install (the install step replaces them
-// with links into the adapted package).
-function stageWithoutUpstreamPstack(dir) {
-  const stage = mkdtempSync(join(tmpdir(), "skills-stage-"));
-  for (const name of readdirSync(dir)) {
-    const entry = join(dir, name);
-    try {
-      if (isUnder(entry, UPSTREAM_PSTACK)) continue;
-    } catch {
-      continue; // broken symlink
-    }
-    symlinkSync(entry, join(stage, name));
-  }
-  return stage;
-}
-
-test("Pi loads the adapted package with no pstack name collisions", async () => {
+test("Pi loads the adapted package with no pstack name collisions (staged post-install state)", async () => {
   assert.ok(
     existsSync(ADAPTED_SKILLS),
     "adapted/skills missing; run `npm run generate` first",
@@ -68,53 +30,88 @@ test("Pi loads the adapted package with no pstack name collisions", async () => 
   const staged = stageWithoutUpstreamPstack(AGENTS_SKILLS);
   const { skills, diagnostics } = loadSkills({
     cwd: REPO_ROOT,
-    agentDir: join(homedir(), ".pi/agent"),
+    agentDir: PI_AGENT_DIR,
     skillPaths: [ADAPTED_SKILLS, staged, PI_AGENT_SKILLS],
     includeDefaults: false,
   });
+  assertNoAdaptedProblems(skills, diagnostics, adaptedNames());
+});
 
-  const adaptedNames = new Set(readdirSync(ADAPTED_SKILLS));
-  const collisions = diagnostics.filter(
-    (d) => d.type === "collision" && adaptedNames.has(d.collision?.name),
-  );
-  assert.deepEqual(
-    collisions,
-    [],
-    `collisions for adapted skills: ${JSON.stringify(collisions, null, 2)}`,
-  );
+// Offline SDK expansion probe: session.steer() expands /skill: commands into
+// queued steering messages without any provider call (the session is never
+// prompted). This is NOT a live interactive smoke test.
+test("/skill:poteto-mode expands via the public SDK queue path", async () => {
+  const pi = await resolvePi();
+  const staged = stageWithoutUpstreamPstack(AGENTS_SKILLS);
 
-  const adaptedRealRoot = realpathSync(ADAPTED_SKILLS);
-  const adaptedDiagnostics = diagnostics.filter((d) => {
-    if (d.type === "collision") {
-      return [d.collision?.winnerPath, d.collision?.loserPath].some(
-        (p) => p && isUnder(p, adaptedRealRoot),
-      );
-    }
-    return d.path && isUnder(d.path, adaptedRealRoot);
+  const tmp = mkdtempSync(join(tmpdir(), "pi-sdk-"));
+  const agentDir = join(tmp, "agent");
+  writeFileSync(join(tmp, "auth.json"), "{}");
+  const modelRuntime = await pi.ModelRuntime.create({
+    authPath: join(tmp, "auth.json"),
+    modelsPath: null,
+    allowModelNetwork: false,
+    refreshOnCreate: false,
   });
-  assert.deepEqual(
-    adaptedDiagnostics,
-    [],
-    `diagnostics for adapted skills: ${JSON.stringify(adaptedDiagnostics, null, 2)}`,
-  );
+  const settingsManager = pi.SettingsManager.inMemory();
+  const resourceLoader = new pi.DefaultResourceLoader({
+    cwd: tmp,
+    agentDir,
+    settingsManager,
+    noExtensions: true,
+    additionalSkillPaths: [ADAPTED_SKILLS, staged, PI_AGENT_SKILLS],
+  });
+  await resourceLoader.reload();
+  const { session } = await pi.createAgentSession({
+    cwd: tmp,
+    agentDir,
+    modelRuntime,
+    settingsManager,
+    sessionManager: pi.SessionManager.inMemory(tmp),
+    resourceLoader,
+    noTools: "all",
+  });
 
-  const poteto = skills.find((s) => s.name === "poteto-mode");
-  assert.ok(poteto, "poteto-mode was not loaded");
-  assert.equal(
-    realpathSync(poteto.filePath),
-    realpathSync(join(ADAPTED_SKILLS, "poteto-mode/SKILL.md")),
-  );
-  assert.equal(
-    realpathSync(poteto.baseDir),
-    realpathSync(join(ADAPTED_SKILLS, "poteto-mode")),
-  );
+  try {
+    const arg = "pi-pstack-expansion-probe";
+    await session.steer(`/skill:poteto-mode ${arg}`);
+    const queued = session.getSteeringMessages();
+    assert.equal(queued.length, 1);
+    const expanded = queued[0];
 
-  for (const name of adaptedNames) {
-    const skill = skills.find((s) => s.name === name);
-    assert.ok(skill, `adapted skill ${name} not loaded`);
-    assert.ok(
-      isUnder(skill.filePath, adaptedRealRoot),
-      `${name} loaded from ${skill.filePath}, not the adapted package`,
+    const poteto = resourceLoader
+      .getSkills()
+      .skills.find((s) => s.name === "poteto-mode");
+    assert.ok(poteto, "poteto-mode not visible to the session");
+    assert.equal(
+      realpathSync(poteto.filePath),
+      realpathSync(join(ADAPTED_SKILLS, "poteto-mode/SKILL.md")),
+      "poteto-mode resolved outside the generated package",
     );
+    assert.equal(
+      realpathSync(poteto.baseDir),
+      realpathSync(join(ADAPTED_SKILLS, "poteto-mode")),
+    );
+
+    assert.match(
+      expanded,
+      /^<skill name="poteto-mode" location="[^"]+">/,
+    );
+    assert.ok(
+      expanded.includes(`References are relative to ${poteto.baseDir}.`),
+      "missing baseDir note",
+    );
+    assert.ok(
+      expanded.includes("## Playbooks"),
+      "expanded body lost the upstream playbook section",
+    );
+    assert.ok(expanded.endsWith(arg), "user argument not appended");
+    assert.ok(
+      !expanded.includes("/skill:poteto-mode"),
+      "literal /skill: command left unexpanded",
+    );
+  } finally {
+    session.clearQueue();
+    session.dispose();
   }
 });

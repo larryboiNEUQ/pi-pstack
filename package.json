@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "generate": "node scripts/generate.mjs",
-    "test": "node --test 'test/**/*.test.mjs'"
+    "test": "node --test 'test/**/*.test.mjs'",
+    "test:installed": "node --test test/installed-skills.mjs"
   }
 }

@@ -2,7 +2,13 @@
 
 面向 Pi 的 pstack 适配包仓库。
 
-本仓库从固定的上游 pstack 快照生成 Pi 版技能（适配包），复用本机 Tintinweb 子代理系统，只支持显式调用。当前已有方案、ADR 和 Issue，尚无生成器代码和适配包。仓库名不表示它是 npm 上同名 `pi-pstack` 社区包的镜像或 fork。
+本仓库从固定的上游 pstack 快照生成 Pi 版技能（适配包），复用本机 Tintinweb 子代理系统，只支持显式调用。当前适配包已可生成并安装到 `~/.agents/skills`（`adapted/skills/` 共 47 个技能），但只是基础快照：映射说明、agent 文件、模型表等运行时整合仍待 Issue 02 完成。仓库名不表示它是 npm 上同名 `pi-pstack` 社区包的镜像或 fork。
+
+## 生成与测试
+
+- `npm run generate`：从固定上游提交 `adf3218` 重新生成 `adapted/` 和 `docs/upstream-guide/`。
+- `npm test`：生成器测试（含最小 fixture 的锚点失败用例）和 Pi 技能加载/展开测试；不要求已安装适配包。测试需要本机上游快照、已安装的 Pi 和现有技能目录。
+- `npm run test:installed`：安装后验证——用 Pi `loadSkills` 加载真实 `~/.agents/skills`（含 `~/.pi/agent/skills` 默认目录），断言 47 个适配技能的 canonical 路径都落在 `adapted/`、无重名诊断、用户自有 tdd/teach 不受影响、make-bot-ui 不可加载。只检查目录加载，不覆盖扩展包内技能。
 
 ## 从这里开始
 
