@@ -12,7 +12,7 @@
 
 **Status:** ready-for-agent
 
-- [ ] how explorer 使用 swe-2，how explainer 使用 gpt，与模型表一致
+- [ ] how explorer 使用 GPT，how explainer 使用 Claude，与用户最后确认的模型表一致；失败时按主模型回退规则报告
 - [ ] 两个子代理在后台运行，主对话收到完成通知
 - [ ] 主对话回收子代理的完整结果，最终回复基于主对话自己的审查
 - [ ] how 引用的原则技能或兄弟技能被成功读取

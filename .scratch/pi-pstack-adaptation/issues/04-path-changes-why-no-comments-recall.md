@@ -12,7 +12,7 @@
 **Status:** ready-for-agent
 
 - [ ] 第一层测试覆盖本 Issue 的每处改动
-- [ ] 实机：why 跑通，investigators 使用 swe-2，synthesizer 使用 gpt
+- [ ] 实机：why 跑通，investigators 使用 GPT，synthesizer 使用 Claude；失败时按主模型回退规则报告
 - [ ] 实机：no-comments 启动 comment-sicko，并对一处真实 diff 给出结果
 - [ ] 实机：recall 找到当前项目最近的 Pi 会话记录
 - [ ] 实机：reflect 定位到当前会话记录，三个复盘子代理按模型表启动

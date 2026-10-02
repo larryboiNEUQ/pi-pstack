@@ -15,7 +15,7 @@
 **Status:** ready-for-agent
 
 - [ ] 四个 playbook 各有一次实机运行记录：匹配的 playbook、清单、调用的技能和子代理
-- [ ] 写代码的委派使用 swe-2，最难任务使用 gpt
+- [ ] 写代码的委派使用 Grok，最难任务使用 Claude，与上游角色分工一致；新增机械分片可用 swe-2
 - [ ] 至少一次 UI 验证走 ego-browser
 - [ ] 提交前 deslop 和 no-comments 被调用
 - [ ] 发现的映射缺口都通过声明式改动修正，第一层和第二层测试仍通过
