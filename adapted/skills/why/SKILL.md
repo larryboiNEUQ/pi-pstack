@@ -4,6 +4,8 @@ description: "Use for 'why does X work this way', 'why we picked Y', design rati
 disable-model-invocation: true
 ---
 
+> Pi: Before executing this skill, read `../poteto-mode/references/pi-host.md`. That mapping overrides Cursor-specific host instructions.
+
 # Why
 
 Investigate the motivation and intent behind code.

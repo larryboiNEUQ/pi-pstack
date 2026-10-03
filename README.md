@@ -2,13 +2,28 @@
 
 面向 Pi 的 pstack 适配包仓库。
 
-本仓库从固定的上游 pstack 快照生成 Pi 版技能（适配包），复用本机 Tintinweb 子代理系统，只支持显式调用。当前适配包已可生成并安装到 `~/.agents/skills`（`adapted/skills/` 共 47 个技能），但只是基础快照：映射说明、agent 文件、模型表等运行时整合仍待 Issue 02 完成。仓库名不表示它是 npm 上同名 `pi-pstack` 社区包的镜像或 fork。
+本仓库从固定的上游 pstack 快照生成 Pi 版技能（适配包），复用本机 Tintinweb 子代理系统，只支持显式调用。适配包已生成并安装：47 个技能链接到 `adapted/skills/`，三个子代理（poteto-agent、pstack-readonly、comment-sicko，含嵌套委派 allowlist）与模型表/订阅档案种子已安装到 `~/.pi/agent/`。
+
+当前清单栈依次启用 `adaptation/changes.json`、`host-changes.json`、`path-changes.json`、`setup-changes.json`，共 45 条改动；路径适配和整篇重写的 setup-pstack 均已生效。Issue 02 的子代理四模型/thinking/回退实机冒烟已通过；Issue 06 的模型建议、确认写入和备份验收在隔离 fixture 中通过，真实用户配置未改动。Issue 05（含续跑与 UI 截图能力告诫）、07（含 Claude 门禁兜底与评委续跑告诫）、08（用户批准的 PR 复用范围，含 Goal PTY 续跑与 print 模式失败记录）的实机验收均已完成。
+
+公开仓库 <https://github.com/larryboiNEUQ/pi-pstack>，完整适配位于 `pstack-pi-full-spec` 分支和 [PR #1](https://github.com/larryboiNEUQ/pi-pstack/pull/1)。仓库名不表示它是 npm 上同名 `pi-pstack` 社区包的镜像或 fork。
 
 ## 生成与测试
 
-- `npm run generate`：从固定上游提交 `adf3218` 重新生成 `adapted/` 和 `docs/upstream-guide/`。
-- `npm test`：生成器测试（含最小 fixture 的锚点失败用例）和 Pi 技能加载/展开测试；不要求已安装适配包。测试需要本机上游快照、已安装的 Pi 和现有技能目录。
+- `npm run generate`：从固定上游提交 `c47b12849e43f18d5c374c7069c744cc55b0ea00`（pstack 0.15.5）重新生成 `adapted/` 和 `docs/upstream-guide/`。
+- `node --test test/generate.test.mjs test/pi-load.test.mjs`：窄范围生成器和离线 Pi 技能加载/展开验证；Issue 09 在独立 worktree 中运行一次，63 项通过，生成 47 个技能且输出相对集成基线无 diff。
+- `npm test`：完整本地测试集，包括生成器、安装器 fixture 和 Pi 技能加载/展开；测试需要本机上游快照、已安装的 Pi 和现有技能目录。最近一次全量门禁在 `f7706db`：86/86 通过，`test:installed` 1/1，且固定 pin 重新生成与已提交 `adapted/`、`docs/upstream-guide/` 逐字节一致（133/19 项）。`f7706db` 按代码审查两轴修复了 3 个 Standards P2 和 2 个 Spec P2（可选 P3 行解析未改）；`7c0e776` 为纯文档性澄清，源与生成物 cmp 一致。
 - `npm run test:installed`：安装后验证——用 Pi `loadSkills` 加载真实 `~/.agents/skills`（含 `~/.pi/agent/skills` 默认目录），断言 47 个适配技能的 canonical 路径都落在 `adapted/`、无重名诊断、用户自有 tdd/teach 不受影响、make-bot-ui 不可加载。只检查目录加载，不覆盖扩展包内技能。
+
+当前未配置 CI，CI 证据记为不可用；本地通过不等于 CI 通过。
+
+最终两轴审查没有发现硬性 Standards 违规；Spec 的外部 tdd/teach 查找、嵌套评委家族选择和教程安装说明已修复。`4029000` 的 13 项定向回归通过，且重新生成的技能与教程在字节、模式和链接目标上与提交内容一致；没有把这次定向验证说成新的全量测试。
+
+## Model Defaults 与后续维护
+
+发布的默认表位于 `adapted/skills/poteto-mode/references/default-models.md`，角色目录位于同目录的 `roles.json`；`adapted/config/` 提供安装种子。已有用户表 `~/.pi/agent/pstack/models.md` 和订阅档案 `subscriptions.md` 不由重新生成重置。
+
+模型或订阅变化时显式调用 `/skill:setup-pstack`：先发现当前可用模型并提出整表建议，用户确认后才刷新可用列表、验证、备份和写入。Issue 06 的“Grok 到期”结果只用于隔离 fixture 验收，不是对真实默认表的重新分配；fixture 已守卫恢复。后续 workflow 的验收仍按各 Issue 单独推进。
 
 ## 从这里开始
 
@@ -29,7 +44,7 @@
 
 ## 已确认的工程约定
 
-- 独立本地 Git 仓库，默认分支为 `main`。尚未配置 remote。
+- GitHub 公开仓库为 `larryboiNEUQ/pi-pstack`，默认分支为 `main`；完整适配在 `pstack-pi-full-spec` 分支和 draft PR #1 中推进。
 - Issues 和 specs 使用本地 Markdown，放在 `.scratch/<feature>/`。
 - 使用默认 triage labels。
 - 使用单一 root `CONTEXT.md` 和 `docs/adr/`。
@@ -37,14 +52,14 @@
 
 ## 已决定
 
-- 上游内容固定为本机 cursor-plugins 提交 `adf3218`，pstack 0.15.5。跟进最新版本见 Issue 09。
+- 上游内容固定为官方 cursor/plugins 在 2026-10-02 查询并获取的 HEAD `c47b12849e43f18d5c374c7069c744cc55b0ea00`，pstack 仍为 0.15.5。Issue 09 依据 lead 审计确认选定输入相对旧 pin 无内容或模式变化；这不是对未来 HEAD 的动态跟踪。
 - 适配方案见 ADR 0001 和 spec。
 - 生成的适配包提交进本仓库。
 - 测试分三层：生成器、Pi 技能加载、实机冒烟。
 
-## 尚未决定
+## 发布范围
 
-插件发布名称、许可证和远程仓库。当前只供本机使用，不发布。
+源码仓库已公开；当前不发布 npm 包。本仓库新增代码尚未指定许可证；上游技能及教程保留其原有 LICENSE，不将上游许可范围扩展为本仓库全部代码。
 
 ## 配置边界
 

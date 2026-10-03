@@ -1,3 +1,5 @@
+> Pi: Before executing this playbook, read `../references/pi-host.md` relative to this file. That mapping overrides Cursor-specific host instructions.
+
 ### Multi-phase or multi-PR plan
 
 **You own the plan, not the code. The plan is a checklist an owner runs box by box and the operator audits from the evidence.** The plan is the deliverable. Do not implement.

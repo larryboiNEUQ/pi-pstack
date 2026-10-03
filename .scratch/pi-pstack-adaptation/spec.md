@@ -16,7 +16,7 @@
 - 上游角色默认模型是 Cursor 模型名，在 Pi 中无效。
 - 现有 Tintinweb 角色文件写死模型，会覆盖技能指定的模型。
 - 社区 Pi 移植都不能原样使用。
-- 用户的模型额度不均衡：gpt 最多，grok 次之，devin claude 最少，devin swe-2 不限量。照搬上游默认会很快耗尽 claude。
+- 用户的模型额度不均衡：gpt 最多，grok 次之，devin claude 最少，devin swe-2 不限量。用户最后选择保留上游角色默认；指定模型失败时回退主模型，不自动按额度换掉 Claude。
 
 ## Solution
 
@@ -25,7 +25,7 @@
 - 技能正文保持上游原文，只加少量声明式改动。
 - 一份映射说明告诉模型 Cursor 能力在 Pi 中的对应。
 - 三个新 agent 文件让技能能指定子代理的模型和工具范围。
-- 模型表按用户订阅分配角色模型。指定模型失败时，用主模型重跑。
+- 模型表保留上游角色模型家族和用户确认的探索角色例外。订阅变化时可提议重分配；指定模型失败时，用主模型重跑。
 - 重写的 setup-pstack 让用户在模型更新或订阅变化时快速重新分配。
 - 用户显式调用技能，不使用持续模式。
 
@@ -56,9 +56,9 @@
 23. 作为 Pi 用户，我想让 create-verification-skill 把技能写进 Pi 能发现的目录，以便生成的验证技能可被调用。
 24. 作为 Pi 用户，我想让每个角色按模型表指定模型和 thinking 档位，以便子代理用我选的模型。
 25. 作为 Pi 用户，我想让模型表中没写的角色使用主模型，以便不必配置每个角色。
-26. 作为 Pi 用户，我想让写代码和批量读取类角色使用 swe-2，以便脏活不消耗付费额度。
-27. 作为 Pi 用户，我想让判断和写作类角色使用 gpt，以便使用主力额度。
-28. 作为 Pi 用户，我想让 claude 只在 interrogate 中占一个席位，以便稀缺额度用在对抗价值最高的地方。
+26. 作为 Pi 用户，我想保留上游写代码角色的 Grok 默认，把新增机械分片角色交给 swe-2，以便不改变上游主要角色分工。
+27. 作为 Pi 用户，我想保留上游判断和写作角色的 Claude 默认，how explorer 和 why investigators 使用已确认的 GPT 映射。
+28. 作为 Pi 用户，我想保留 interrogate、arena、architect 的 Claude/GPT/Grok 三家席位，失败时回退主模型并报告多样性变化。
 29. 作为 Pi 用户，我想让 interrogate、arena、architect 的各席位来自不同模型家族，以便保留对抗检验。
 30. 作为 Pi 用户，我想让 arena 的评委和主模型不同家，以便减少自评。
 31. 作为 Pi 用户，我想在指定模型因额度、限流或不可用失败时用主模型重跑一次，以便任务不中断。
@@ -82,11 +82,13 @@
 49. 作为维护者，我想在实机冒烟中记录每家模型的实际模型和 thinking 档位，以便证明模型表生效。
 50. 作为维护者，我想让后置 playbook（babysit、shipping、opening-a-pr、autonomous-run、orchestrate、autopilot）在确认 gh 和 Bun 可用后再验证，以便不阻塞主要工作流。
 
+后置验收按用户后续确认复用已创建的 PR #1：Opening a PR 的本地门禁在隔离 fixture 中运行，Babysit 与 Shipping 只读该 PR；不新建测试分支或第二条 PR，不把未重复执行的创建 PR 步骤当作本轮通过。
+
 ## Implementation Decisions
 
 ### 内容源
 
-- 上游快照固定为本机 cursor-plugins 仓库提交 `adf3218`，pstack 版本 0.15.5。
+- 上游快照固定为官方 cursor/plugins 在 2026-10-02 查询并获取的 HEAD `c47b12849e43f18d5c374c7069c744cc55b0ea00`，pstack 版本仍为 0.15.5（Issue 09；选定输入无变化，依据 lead 冻结审计）。
 - 从同一仓库的 cursor-team-kit 原样带入 deslop、control-cli、control-ui。三者为 MIT 许可，不依赖 Cursor。
 - 跟进上游最新版本另开 Issue。
 
@@ -150,35 +152,36 @@
 
 格式沿用上游：每行一个角色，值为一个模型或逗号分隔的列表。模型写作 `provider/model:thinking`。初始内容：
 
+2026-10-02 同步用户最后决定：“所有都还是按它的默认来配，只是额度不够失败都回退到主模型”。此前额度优化表不再是安装默认。how explorer 和 why investigators 保留用户已确认的 GPT 例外。新增机械分片角色使用 swe-2；Comment Sicko 上游未指定模型，默认继承。
+
 ```
-feature, refactoring: devin/swe-2:high
-bug-fix: devin/swe-2:high
-perf-issue: devin/swe-2:high
-hillclimb: devin/swe-2:high
-swarm workers: devin/swe-2:high
-how explorer: devin/swe-2:high
-why investigators: devin/swe-2:high
+feature, refactoring: xai/grok-4.7:xhigh
+bug-fix: xai/grok-4.7:xhigh
+perf-issue: xai/grok-4.7:xhigh
+hillclimb: xai/grok-4.7:xhigh
+swarm workers: xai/grok-4.7:xhigh
+how explorer: openai/gpt-6.1-sol:xhigh
+why investigators: openai/gpt-6.1-sol:xhigh
 recall slices: devin/swe-2:medium
 automate-me slices: devin/swe-2:medium
 verification source wave: devin/swe-2:medium
-comment sicko: devin/swe-2:medium
-hardest tasks: openai/gpt-6.1-sol:xhigh
-judgment and prose: openai/gpt-6.1-sol:high
-how explainer: openai/gpt-6.1-sol:xhigh
-why synthesizer: openai/gpt-6.1-sol:xhigh
-reflect tooling: openai/gpt-6.1-sol:high
-reflect judgment, synthesizer: openai/gpt-6.1-sol:high
-reflect divergent: xai/grok-4.7:high
+comment sicko: inherit-parent
+hardest tasks: devin/claude-opus-5.5:xhigh
+judgment and prose: devin/claude-opus-5.5:xhigh
+how explainer: devin/claude-opus-5.5:xhigh
+why synthesizer: devin/claude-opus-5.5:xhigh
+reflect tooling: openai/gpt-6.1-sol:xhigh
+reflect judgment, divergent, synthesizer: devin/claude-opus-5.5:xhigh
 interrogate reviewers: devin/claude-opus-5.5:xhigh, openai/gpt-6.1-sol:xhigh, xai/grok-4.7:xhigh
-arena runners: openai/gpt-6.1-sol:xhigh, xai/grok-4.7:xhigh, devin/swe-2:high
-architect runners: openai/gpt-6.1-sol:xhigh, xai/grok-4.7:xhigh, devin/swe-2:high
-arena cross-judge pool: xai/grok-4.7:xhigh, openai/gpt-6.1-sol:xhigh
-show-me-your-work auditor: xai/grok-4.7:high, openai/gpt-6.1-sol:high
+arena runners: devin/claude-opus-5.5:xhigh, openai/gpt-6.1-sol:xhigh, xai/grok-4.7:xhigh
+architect runners: devin/claude-opus-5.5:xhigh, openai/gpt-6.1-sol:xhigh, xai/grok-4.7:xhigh
+arena cross-judge pool: devin/claude-opus-5.5:xhigh, openai/gpt-6.1-sol:xhigh, xai/grok-4.7:xhigh
+show-me-your-work auditor: xai/grok-4.7:xhigh, openai/gpt-6.1-sol:xhigh, devin/claude-opus-5.5:xhigh
 ```
 
 - show-me-your-work 审计员从列表中选和干活模型不同家的一个。
 - autopilot 和 orchestrate 的负责人不配置，使用主模型。
-- 上游原有的 `reflect judgment, divergent, synthesizer` 一行拆为两行。recall、automate-me、verification source wave、comment sicko 是本适配新增的角色，在映射说明中声明。
+- 保留上游原有的 `reflect judgment, divergent, synthesizer` 合并标签。recall、automate-me、verification source wave、comment sicko 和审计池是本适配新增的配置角色，在映射说明中声明。
 
 ### 订阅档案
 
@@ -189,7 +192,7 @@ show-me-your-work auditor: xai/grok-4.7:high, openai/gpt-6.1-sol:high
 
 1. 读取角色目录、订阅档案和模型表。
 2. 运行 `pi --list-models`，标出同家族新模型和已失效模型。
-3. 按规则分配：脏活用不限量模型；判断写作用主力额度；对抗类技能各席位家族互不相同；稀缺模型最多放一个对抗席位；评委与主模型不同家。
+3. 默认保留已批准的角色分配。只有用户要求按额度重分配时，才提议脏活用不限量模型、判断写作用主力额度。对抗类技能各席位家族互不相同；每个面板中稀缺模型最多一个席位；评委与主模型不同家。
 4. 输出表格：角色、用途、当前模型、建议模型、理由。
 5. 用 `ask_user_question` 让用户整体接受或修改某几行。
 6. 检查所选模型都在可用列表中。
@@ -236,7 +239,7 @@ show-me-your-work auditor: xai/grok-4.7:high, openai/gpt-6.1-sol:high
 
 ### 第三层：实机冒烟
 
-- 在真实 Pi 会话中运行，不能自动化。证据记录在对应 Issue 的 Comments 中。
+- 必须在真实 Pi 会话中运行；可用受限 CLI 或 PTY 驱动组织调用，但不得以离线 SDK 展开冒充真实模型执行。证据记录在对应 Issue 的 Comments 中。
 - 每家模型（swe-2、gpt、grok、claude）各起一个子代理。记录实际模型和 thinking 档位。
 - 故意指定一个不可用的模型，确认回退规则执行并在回复中写明。
 - 确认不传 thinking 时子代理的实际档位。
@@ -250,8 +253,8 @@ show-me-your-work auditor: xai/grok-4.7:high, openai/gpt-6.1-sol:high
 - make-bot-ui。
 - Pi extension、社区 Pi 移植、第二套子代理 runner。
 - 修改 Pi settings、已装插件、默认模型或现有角色文件。
-- npm 发布、包名、远程仓库。
-- 跟进上游最新版本（另开 Issue）。
+- npm 发布和发布包名。远程仓库与 draft PR 已由用户后续明确授权创建；后置验收复用该 PR，不新增测试远端资源。
+- 首轮接入不切换上游版本。现有 Issue 09 单独负责最新版本检查和更新。
 
 ## Further Notes
 
@@ -260,13 +263,17 @@ show-me-your-work auditor: xai/grok-4.7:high, openai/gpt-6.1-sol:high
 - 保留原文：全部原则技能、playbook 步骤与路由、how、why、architect、arena、interrogate、swarm、reflect 的流程。
 - 平台替换：见映射说明表。
 - 删除：见 Out of Scope 前五项。
-- 减弱：claude 只在 interrogate 中出现；arena 和 architect 的 claude 席位改为 swe-2；thinking 最高为 xhigh，没有 max 和 fast；reflect、recall 读取的会话格式不同；swarm 并行规模受本机和额度限制；清单没有界面。
-- 新增：按订阅分配模型；回退规则；setup-pstack 读取订阅档案并检测新模型；锚点检查。
+- 平台限制：本适配将 Cursor max 映射为 xhigh，fast 不作为单独模型身份；这不表示 Pi 宿主完全没有 max 档。reflect、recall 的会话格式不同；swarm 并行规模受本机和额度限制；清单没有专用界面。
+- 模型策略：保留上游主要角色的 Claude/GPT/Grok 家族；how explorer 和 why investigators 使用用户确认的 GPT 例外；新增机械分片使用 swe-2。指定模型失败时只回退主模型。
+- 新增：setup-pstack 可按订阅提出重新分配建议，检测新模型；统一回退规则；锚点检查。
 
-### 未验证项
+### 验证结果与限制
 
-1. swe-2 能否在 Tintinweb 子代理中正常启动，thinking 档位是否生效。
-2. 不传 thinking 时，子代理使用主对话实时档位还是全局默认档位。
-3. 子代理遇到 429 时，Pi 是否先自动重试。
-4. Tintinweb 按 agent 文件名还是 frontmatter 名称识别 agent 类型。
-5. 现有 Explore、worker、reviewer 引用的 openai-codex 模型不在当前模型列表中。本 spec 不处理。
+1. Issue 02 实机确认 SWE-2 可启动且实际 thinking 为 medium；其余三家身份与 thinking 也有当次真实记录，不推断永久可用性。
+2. 省略 thinking 的子代理实际使用 medium，而非父对话实时 high。已知 root thinking 应显式传递，否则报告实际档位。
+3. 真实 429 未触发；不声称已验证 Pi 的 429 自动重试策略。
+4. 实际 Tintinweb loader 确认 frontmatter 名称优先；三个新 agent 无冲突。
+5. 既有 Explore、worker、reviewer 的 openai-codex 引用不在本迁移改动范围，未改这些角色。
+6. 后续 Claude 请求出现版本门禁并按主模型回退；不是配额错误，未升级或修改已装 provider。
+7. Ego 原生 DOM 交互通过，但截图接口在本机超时；没有图像证明声明。
+8. `/goal` 交互式实机完成；print-mode 探针的事件边界错误与驱动过早提交均保留为失败记录。测试终端由 harness 收尾，不声称 CLI 自然退出。

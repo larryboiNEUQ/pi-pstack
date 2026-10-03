@@ -8,7 +8,7 @@ import {
   symlinkSync,
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { join, resolve, sep } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const REPO_ROOT = resolve(fileURLToPath(import.meta.url), "../..");
@@ -42,15 +42,38 @@ export function isUnder(child, root) {
   return r === root || r.startsWith(root + sep);
 }
 
-// Stage a copy of a skills dir as symlinks, dropping entries whose real
-// target is the old upstream pstack install. Post-install there should be
-// none left, but the filter keeps the simulation honest if links regress.
-export function stageWithoutUpstreamPstack(dir) {
+function knownGeneratedSkillRoots() {
+  const root = resolve(REPO_ROOT);
+  const common = execFileSync("git", ["-C", root, "rev-parse", "--git-common-dir"], {
+    encoding: "utf8",
+  }).trim();
+  return [
+    ADAPTED_SKILLS,
+    join(dirname(resolve(root, common)), "adapted/skills"),
+  ];
+}
+
+// Pre-install simulation: drop upstream pstack and matching skill names only
+// under this checkout's or its common main checkout's generated roots.
+// Unrelated user packages pass through, even when their path is adapted/skills.
+export function stageWithoutUpstreamPstack(dir, excludeNames = new Set()) {
+  const generatedRoots = knownGeneratedSkillRoots()
+    .filter((root) => existsSync(root))
+    .map((root) => realpathSync(root));
   const stage = mkdtempSync(join(tmpdir(), "skills-stage-"));
   for (const name of readdirSync(dir)) {
     const entry = join(dir, name);
     try {
-      if (isUnder(entry, UPSTREAM_PSTACK)) continue;
+      const real = realpathSync(entry);
+      if (real === UPSTREAM_PSTACK || real.startsWith(UPSTREAM_PSTACK + sep)) {
+        continue;
+      }
+      if (
+        excludeNames.has(name) &&
+        generatedRoots.some((root) => real === root || real.startsWith(root + sep))
+      ) {
+        continue;
+      }
     } catch {
       continue; // broken symlink
     }

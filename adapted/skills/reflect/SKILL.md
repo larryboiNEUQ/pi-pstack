@@ -4,6 +4,8 @@ description: Spawn three parallel review subagents over the active transcript, s
 disable-model-invocation: true
 ---
 
+> Pi: Before executing this skill, read `../poteto-mode/references/pi-host.md`. That mapping overrides Cursor-specific host instructions.
+
 # Reflect
 
 Mine the current conversation for durable learnings, then route them into skill edits.
@@ -16,15 +18,13 @@ Invoke when the user says "reflect" or "/reflect". Skip when the conversation is
 
 ### 1. Locate the active transcript
 
-The parent finds its own transcript file before fanning out. The system prompt names the active workspace's `agent-transcripts/` directory. Use that path. Do not glob across `~/.cursor/projects/*/`. That crosses workspace boundaries and reads private chats from unrelated projects.
+The parent identifies its own Pi session JSONL before fanning out. Prefer an explicitly known current session path; otherwise inspect only the active workspace's `~/.pi/agent/sessions/--<encoded-cwd>--/` directory, using the Pi host mapping and any configured session-directory override. Verify the session header's cwd and identity. Do not search unrelated projects' private sessions.
 
 ```bash
-ls -t <agent-transcripts>/*.jsonl <agent-transcripts>/*/*.jsonl <agent-transcripts>/*/subagents/*.jsonl 2>/dev/null | head -10
+ls -t <workspace-session-dir>/*.jsonl 2>/dev/null | head -10
 ```
 
-Three transcript layouts: legacy flat (`<id>.jsonl`), current nested (`<id>/<id>.jsonl`), and subagent (`<parent>/subagents/<child>.jsonl`).
-
-For each candidate, read the first JSONL line and check that `message.content[0].text` contains the conversation's opening user prompt. Take the matching path. If no path resolves, write a tight digest of the session and pass that instead.
+Pi's first JSONL entry is a session header, not an opening chat message. Check that header's cwd and session identity, then inspect `type: "message"` entries and their nested `message.role` and `message.content`. Keep tool calls and results when evaluating actual behavior. A newest modification time alone does not identify the current run. If no current path resolves, label a tight session digest as reduced evidence and pass that instead.
 
 ### 2. Spawn three reviewers in parallel
 
