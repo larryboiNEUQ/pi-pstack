@@ -7,7 +7,9 @@ Read this reference before executing a pstack skill on Pi. It overrides Cursor-s
 - Invoke `/skill:poteto-mode <task>` explicitly. The main conversation executes the selected playbook. There is no persistent mode, per-turn injection, or automatic handoff to poteto-agent.
 - `/skill:<name>` expands other skills. Inline `$<name>` depends on the user's existing inline-skill plugins.
 - Resolve a relative path against the invoking skill's base directory. Read a sibling skill at `<baseDir>/../<name>/SKILL.md`. From a playbook, first locate its enclosing poteto-mode directory.
-- `tdd` and `teach` are intentionally external, not siblings in this package. Resolve their actual paths from the host's advertised skill catalog. If absent there, check `~/.agents/skills/<name>/SKILL.md`, then `~/.pi/agent/skills/<name>/SKILL.md`; report unavailable if neither exists. Never recreate or overwrite the user's existing skills to satisfy a relative reference.
+- Bare `tdd` and `teach` stay the user's existing Matt Pocock skills. They are not siblings in this package. An explicit `/skill:tdd` or `/skill:teach` resolves from the host's advertised skill catalog. If absent there, check `~/.agents/skills/<name>/SKILL.md`, then `~/.pi/agent/skills/<name>/SKILL.md`. Report unavailable if neither exists. Never recreate or overwrite those skills.
+- This package ships `pstack-tdd` and `pstack-teach`. Directory names and frontmatter names match. Read them at `<baseDir>/../pstack-tdd/SKILL.md` and `<baseDir>/../pstack-teach/SKILL.md`. The packaged bug-fix playbook always uses `pstack-tdd`. Do not send that playbook to the bare user skill.
+- `pstack-teach` dispatches `how` and `why` on the existing role lines. Do not add a teach role. When the skill asks for a picture and the user did not authorize a raster in this task, draw mermaid. Do not call image generation, including Codex image generation, only because the skill mentions a whiteboard image.
 - Read hidden sibling and principle skills by path. `disable-model-invocation` hides discovery metadata, not explicit invocation or file access.
 - Copy the selected playbook steps into a Markdown checklist. Track skipped steps with a reason. A missing todo tool does not remove the checklist.
 
@@ -23,11 +25,13 @@ Use the installed Tintinweb `Agent` tool, not Cursor Task or another subagent ru
 | poteto-agent | subagent_type poteto-agent |
 | Comment Sicko | subagent_type comment-sicko |
 | run_in_background | run_in_background true for top-level delegation |
-| resume | Resume only a completed agent using its returned ID |
+| resume | Resume a completed agent by its returned ID only when costly local state is essential. Otherwise start a fresh Agent |
 | interrupt a running agent | steer_subagent with agent_id and message |
 | retrieve complete output | get_subagent_result with agent_id and verbose true |
 | environment cloud | Local execution; worktree isolation for concurrent writers |
 | readonly false to retain MCP | poteto-agent with inherited extension tools |
+
+Fresh agents are the default for new work, a fix round, a follow-up, a retry, and the next queue item. Carry the original brief, later directives, and the prior report and branch in the new prompt. Resume a completed agent, using its returned ID, only when the new work needs state that lives in that agent and is costly to move. That state is its local checkout, its uncommitted changes, or a process it still runs. A stop or hold sent to a running agent is not reuse. A role such as a PR owner outlives its agent. Once that agent returns, a fresh agent takes the role's next round. Do not resume a running agent. Use `steer_subagent` to interrupt one.
 
 Pass a description, a self-contained prompt or file pointers, and the resolved role model and thinking. Do not pass unsupported `readonly`, `environment`, or Cursor-only arguments.
 
@@ -80,7 +84,9 @@ This rule overrides all upstream instructions to retry on a same-family default,
 | AskQuestion | ask_user_question; if unavailable, ask the same options in plain text |
 | pstack-models.mdc | ~/.pi/agent/pstack/models.md, explicitly read |
 | model setup | /skill:setup-pstack |
-| /loop or autonomous-run | Existing pi-goal /goal with an explicit stop condition |
+| bounded autonomous continuation | Existing pi-goal `/goal` with an explicit stop condition. Not a timer and not a substitute for `/loop 1h` |
+| `/loop`, `/loop 1h`, or another timed wake | Unsupported and unverified. Do not map it to `/goal`. Do not install a scheduler. Do not fake a sleep loop and call it `/loop` |
+| built-in PR tool | None on this host. Use resolved `gh` after an auth check. Do not call a hypothetical Cursor or host PR tool |
 | control-ui for a Web page | Read ego-browser SKILL.md and use its browser |
 | control-ui for Electron or IDE | Read the bundled control-ui skill |
 | CLI or TUI verification | Read the bundled control-cli skill |
@@ -88,9 +94,23 @@ This rule overrides all upstream instructions to retry on a same-family default,
 | cursor-team-kit deslop | Read the bundled deslop skill |
 | .cursor/skills for newly authored skills | .agents/skills, or ~/.agents/skills with explicit user approval |
 
+The upstream plan template and `scripts/check-plan.mjs` stay aligned with each other. The checker is structural. It requires the literal marker `/loop 1h` in the program checklist. A passing run is not proof that a live hourly timer exists or fired. Do not edit the checker or the template to hide that marker. When a playbook says to arm `/loop 1h`, report the timed loop as unsupported and unverified. Do not claim the tick ran.
+
+Pi has no built-in PR tool. Create, edit, retarget, and mark ready through the resolved forge. Check `gh` authentication and repository scope first. If `command -v origin` succeeds and Origin can resolve the repository, Origin remains the documented fallback. Otherwise stay on `gh`. Do not invent a Cursor PR tool.
+
 Replacing create-skill does not supply its proprietary evaluation or description-tuning runtime. Preserve the draft, test, and revise process with tools available in Pi; report unavailable host features.
 
 Existing `/goal` and ask-user tools come from the user's installed plugins. Do not install replacements or edit settings to hide a missing capability.
+
+## Measurement Tools
+
+`benchmark-checklist` names Linux commands. Check `command -v` before using one. If the command is absent, report the gap. Do not claim the tool exists, and do not install it to satisfy the checklist.
+
+On macOS, when `nproc` is absent, use `sysctl -n hw.ncpu` for the core count. When `pidstat` is absent, use `top` for a per-process CPU look. That does not mean `top` matches `pidstat` output.
+
+`strace -c` is a Linux command. Do not substitute an unverified tool for it. `dtruss` may be present on macOS, but it was not proven as a `strace -c` replacement and it often needs extra privileges. Report the syscall-count gap instead.
+
+`py-spy` and `perf` were absent on the macOS host checked for this adaptation. Do not claim them. For a Node workload, `node --cpu-prof` is a flag on the installed Node. Confirm it with `node --help` before citing a profile.
 
 ## Sessions And Privacy
 
@@ -104,11 +124,13 @@ Pi JSONL lines are typed session entries, not all chat messages. For conversatio
 
 Recall searches only the workspace and time range the user approved. Reflect and show-me-your-work audit only the identified run. If the active session path is unavailable, ask for it or report incomplete; do not scan every project's private sessions.
 
+`/skill:correct` may read commits, reverts, review comments, and agent instruction files in the repo the user named. It may edit that repo's agent instruction file and its rule table only after the user authorizes that write in the current task. It must not scan Pi session JSONL, other projects' private sessions, or credential files. If the user did not identify a session, do not mine transcripts for corrections.
+
 ## Limits And Authority
 
 Never dump the environment, enumerate environment values by substring, or read credential files to identify a model or diagnose a provider failure. A filter for `PI_` also matches `API_KEY`. Obtain effective model/thinking from returned host records, not environment inspection. Workers report task evidence; the parent records identities. Do not print API keys, tokens, cookies, or authorization headers. If a secret is accidentally printed, stop, keep raw evidence private, report only its variable name, and ask the user about rotation.
 
-The package does not implement Cursor cloud execution, persistent mode, background routing of the root chat, make-bot-ui, Benny, webhooks, or Cursor automation.
+The package does not implement Cursor cloud execution, persistent mode, timed `/loop`, a built-in PR tool, background routing of the root chat, make-bot-ui, Benny, webhooks, or Cursor automation.
 
 Run GitHub-dependent playbooks only after checking gh authentication and repository scope. Missing remote infrastructure is an unavailable capability, not a passed live test. Bun helpers may be reused locally, but their cloud-agent assumptions are not restored.
 
