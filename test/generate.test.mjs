@@ -1636,19 +1636,27 @@ test("namespaced tdd and teach are upstream files plus declared name and banner"
 
 test("tutorial commands and links resolve to namespaced skill files", () => {
   const tmp = mkdtempSync(join(tmpdir(), "gen-"));
-  const { adaptedDir, guideDir } = generateTo(tmp);
+  const guideDir = join(tmp, "docs", "upstream-guide");
+  const { adaptedDir } = generateTo(tmp, snapshot, { guideDir });
   const linked = [
-    ["03-understand.md", "../../skills/pstack-teach/SKILL.md", "pstack-teach"],
-    ["05-build-and-clean.md", "../../skills/pstack-tdd/SKILL.md", "pstack-tdd"],
+    ["03-understand.md", "../../adapted/skills/pstack-teach/SKILL.md", "pstack-teach"],
+    ["05-build-and-clean.md", "../../adapted/skills/pstack-tdd/SKILL.md", "pstack-tdd"],
   ];
   for (const [file, href, name] of linked) {
-    const text = readFileSync(join(guideDir, file), "utf8");
-    assert.ok(text.includes(href), file);
+    const page = join(guideDir, file);
+    const text = readFileSync(page, "utf8");
+    const token = `/${name}/SKILL.md)`;
+    const end = text.indexOf(token);
+    assert.ok(end >= 0, file);
+    const open = text.lastIndexOf("(", end);
+    const actual = text.slice(open + 1, end + token.length - 1);
+    const dest = resolve(dirname(page), actual);
+    assert.equal(
+      realpathSync(dest),
+      realpathSync(join(adaptedDir, "skills", name, "SKILL.md")),
+    );
+    assert.equal(actual, href, file);
     assert.ok(!text.includes(`../../skills/${name.slice("pstack-".length)}/SKILL.md`), file);
-    const suffix = href.replace(/^(\.\.\/)+/, "");
-    assert.equal(suffix, `skills/${name}/SKILL.md`);
-    const dest = join(adaptedDir, suffix);
-    assert.equal(realpathSync(dest), realpathSync(join(adaptedDir, "skills", name, "SKILL.md")));
   }
   const recipes = readFileSync(join(guideDir, "10-recipes-and-pitfalls.md"), "utf8");
   assert.ok(recipes.includes("/pstack-tdd"));

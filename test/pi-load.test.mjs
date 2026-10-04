@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { test } from "node:test";
 
 import {
@@ -416,15 +416,21 @@ test("tutorial links and the bug-fix reference resolve to loaded namespaced skil
   });
   const byName = Object.fromEntries(skills.map((skill) => [skill.name, skill]));
   const links = [
-    ["03-understand.md", "../../skills/pstack-teach/SKILL.md", "pstack-teach"],
-    ["05-build-and-clean.md", "../../skills/pstack-tdd/SKILL.md", "pstack-tdd"],
+    ["03-understand.md", "../../adapted/skills/pstack-teach/SKILL.md", "pstack-teach"],
+    ["05-build-and-clean.md", "../../adapted/skills/pstack-tdd/SKILL.md", "pstack-tdd"],
   ];
   for (const [file, href, name] of links) {
-    const text = readFileSync(join(REPO_ROOT, "docs/upstream-guide", file), "utf8");
-    assert.ok(text.includes(href), file);
+    const page = join(REPO_ROOT, "docs/upstream-guide", file);
+    const text = readFileSync(page, "utf8");
+    const token = `/${name}/SKILL.md)`;
+    const end = text.indexOf(token);
+    assert.ok(end >= 0, file);
+    const open = text.lastIndexOf("(", end);
+    const actual = text.slice(open + 1, end + token.length - 1);
+    const dest = resolve(dirname(page), actual);
+    assert.equal(realpathSync(dest), realpathSync(byName[name].filePath));
+    assert.equal(actual, href, file);
     assert.equal(text.includes(`../../skills/${name.slice("pstack-".length)}/SKILL.md`), false);
-    const suffix = href.replace(/^(\.\.\/)+/, "").slice("skills/".length);
-    assert.equal(realpathSync(byName[name].filePath), realpathSync(join(ADAPTED_SKILLS, suffix)));
   }
   const bugfix = readFileSync(join(ADAPTED_SKILLS, "poteto-mode/playbooks/bug-fix.md"), "utf8");
   assert.match(bugfix, /\*\*pstack-tdd\*\*/);

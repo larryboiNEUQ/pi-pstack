@@ -28,7 +28,7 @@ The two compose naturally. `do why first then how` is a perfectly good prompt wh
 /pstack-teach me how this PR changes retries. convince me it fixes the cause and not the symptom.
 ```
 
-[`/pstack-teach`](../../skills/pstack-teach/SKILL.md) is for when a summary isn't enough. It runs `/how` and `/why`, for a small change maybe just one of them, and weaves the findings into a plain explanation that builds up diagram by diagram. The "convince me" framing is worth stealing. It turns the explanation into an argument you can poke at instead of a tour.
+[`/pstack-teach`](../../adapted/skills/pstack-teach/SKILL.md) is for when a summary isn't enough. It runs `/how` and `/why`, for a small change maybe just one of them, and weaves the findings into a plain explanation that builds up diagram by diagram. The "convince me" framing is worth stealing. It turns the explanation into an argument you can poke at instead of a tour.
 
 ## Rebuild your own context with `/recall`
 

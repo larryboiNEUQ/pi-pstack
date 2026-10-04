@@ -62,7 +62,7 @@ Bare `tdd` and `teach` stay excluded so the user's Matt Pocock skills keep those
 
 `disable-model-invocation: true` stays. Host banners point at `../poteto-mode/references/pi-host.md`. `pstack-teach` dispatches `how` and `why` on the existing role lines. No teach role was added. A picture request uses mermaid unless the user authorized a raster. It does not call image generation, including Codex image generation, on its own.
 
-The packaged bug-fix playbook always says `pstack-tdd`. Explicit `/skill:tdd` and `/skill:teach` stay the user skills. Tutorial commands and links in the named guide pages point at the prefixed names and `skills/pstack-tdd` / `skills/pstack-teach`. The recipes image alt text was relabeled. `images/recipes.jpg` bytes were not regenerated.
+The packaged bug-fix playbook always says `pstack-tdd`. Explicit `/skill:tdd` and `/skill:teach` stay the user skills. Tutorial commands and links in the named guide pages point at the prefixed names and `adapted/skills/pstack-tdd` and `adapted/skills/pstack-teach`. The recipes image alt text was relabeled. `images/recipes.jpg` bytes were not regenerated.
 
 macOS measurement gaps and the `/goal` versus `/loop 1h` split from the upgrade stay in `pi-host.md`. `check-plan.mjs` is still the upstream checker. A passing structural run is not a live timer.
 
@@ -99,3 +99,32 @@ Passing checks include byte identity for untouched files, exact text ops for ret
 - No CI config. Local pass is not a CI pass.
 - `npm run test:installed` was not run. Installed links remain the previous 47. This worker did not write `~/.agents` or `~/.pi`.
 - No live `/loop 1h`. No push and no merge from this worker.
+
+## Final parent verification
+
+The counts in the next paragraph are parent reports. This fix did not remeasure them.
+
+The old-pin baseline is 92 passing tests. The parent pre-fix suite on `48593e5` is 104 passing tests. Independent review parity is 157 files, 68 ops, and 0 mismatches. The parent confirmed P2. The broken hrefs `../../skills/pstack-teach/SKILL.md` and `../../skills/pstack-tdd/SKILL.md` resolve to a missing root `skills/` directory. The files are `adapted/skills/pstack-teach/SKILL.md` and `adapted/skills/pstack-tdd/SKILL.md`.
+
+This worker's red run happened before the manifest change. Both tutorial link tests failed with `ENOENT`.
+
+```text
+Error: ENOENT: no such file or directory, lstat '/private/var/folders/5y/lr51wkn93lb3v38l9690k3lw0000gn/T/gen-c1aiRE/skills'
+Error: ENOENT: no such file or directory, lstat '/private/tmp/pi-pstack-pr-review-TXfOe4/skills'
+```
+
+The first line is `test/generate.test.mjs`. The second line is `test/pi-load.test.mjs`.
+
+This worker's green run is after the manifest change and `npm run generate`. Targeted tests are 2 pass and 0 fail. Full `npm test` is tests 104, pass 104, fail 0, duration_ms 14503.541334. A second `npm run generate` kept `adapted/` at `32deb76f5483fab3ba6c310902ebf91edb31c3422e0717cb0f8e4d765331152b` and `docs/upstream-guide/` at `327979dd3de7cfd3ae94f131408e1221c35cc8fdc405421d5e2c1efb2823271f`. `git diff --check` was clean.
+
+No CI. No install. No live timers.
+
+## Parent acceptance
+
+The parent reran `npm test` after the link fix. The result was 104 tests, 104 passed, 0 failed, 0 skipped. The run did not call a model provider.
+
+The fresh independent review resolved the P2 by extracting each actual Markdown href, resolving it relative to the containing page, and comparing its realpath with the packaged skill. It found no new issue in the six-file fix. The earlier complete review found no other introduced actionable issue.
+
+The scoped Comment Sicko audit found zero added comments and zero suppressions. The fix added neither. The parent inspected the authored diff for slop and kept the existing generator and registry without a new runner or operation.
+
+Publication is a new PR against `main`, using `gh` because Origin is unavailable. Installation and merge remain out of scope. The original checkout and its unrelated untracked files are untouched.

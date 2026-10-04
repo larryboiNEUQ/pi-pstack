@@ -125,7 +125,7 @@
       "op": "replace",
       "target": "upstream-guide/03-understand.md",
       "anchor": "[`/teach`](../../skills/teach/SKILL.md)",
-      "text": "[`/pstack-teach`](../../skills/pstack-teach/SKILL.md)",
+      "text": "[`/pstack-teach`](../../adapted/skills/pstack-teach/SKILL.md)",
       "reason": "Point the understand-page link at the namespaced skill file."
     },
     {
@@ -149,7 +149,7 @@
       "op": "replace",
       "target": "upstream-guide/05-build-and-clean.md",
       "anchor": "[`/tdd`](../../skills/tdd/SKILL.md)",
-      "text": "[`/pstack-tdd`](../../skills/pstack-tdd/SKILL.md)",
+      "text": "[`/pstack-tdd`](../../adapted/skills/pstack-tdd/SKILL.md)",
       "reason": "Point the build-page link at the namespaced skill file."
     },
     {
