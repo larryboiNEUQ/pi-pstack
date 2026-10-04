@@ -10,13 +10,8 @@ When CI does not exist, record it as unavailable rather than claiming a pass.
 
 `poteto-mode` is the default execution mode for the agent reading this file and working in this repository.
 
-The user invokes these skills:
-
-- `wayfinder` to chart a large effort as decision tickets while the route is unclear.
-- `to-spec` to turn the current conversation into a spec.
-- `to-tickets` to turn a plan or spec into tickets.
-
-`to-spec` then `to-tickets` stays the recording path. `poteto-mode` does not take their place.
+1. Before execution, use `to-spec` to publish the spec, then `to-tickets` to publish its tickets to the issue tracker.
+2. Execute under `poteto-mode`. Its playbooks own planning and implementation, not spec or ticket publication.
 
 ### Issue tracker
 
