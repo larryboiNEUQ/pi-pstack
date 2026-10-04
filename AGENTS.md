@@ -8,7 +8,7 @@ When CI does not exist, record it as unavailable rather than claiming a pass.
 
 ### Workflow
 
-`poteto-mode` is how the project agent executes. It is the default execution mode.
+`poteto-mode` is the default execution mode for the agent reading this file and working in this repository.
 
 The user invokes these skills:
 
