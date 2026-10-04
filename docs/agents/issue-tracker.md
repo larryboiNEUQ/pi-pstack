@@ -2,7 +2,7 @@
 
 [GitHub Issues](https://github.com/larryboiNEUQ/pi-pstack/issues) are the source of truth for specs, tickets, and completion state. Use the `gh` CLI for issue operations. Local `.scratch/` files are temporary working material, not the tracker.
 
-GitHub Issues is the store. `to-spec` and `to-issue` remain the authoring path for specs and task records.
+GitHub Issues is the store. `to-spec` and `to-tickets` remain the authoring path for specs and task records.
 
 ## Conventions
 
