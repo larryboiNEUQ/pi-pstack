@@ -6,6 +6,12 @@ When CI does not exist, record it as unavailable rather than claiming a pass.
 
 ## Agent skills
 
+### Workflow
+
+- poteto-mode: how the project agent executes
+- wayfinder: early / front-end planning
+- to-spec + to-issue: task recording. Keep this path. Do not replace it.
+
 ### Issue tracker
 
 GitHub Issues are the source of truth for specs and tickets at https://github.com/larryboiNEUQ/pi-pstack/issues. Read `docs/agents/issue-tracker.md` when creating, fetching, or updating a ticket.
