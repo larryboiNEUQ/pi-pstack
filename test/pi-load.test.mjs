@@ -180,3 +180,82 @@ test("/skill:poteto-mode expands via the public SDK queue path", async () => {
     session.dispose();
   }
 });
+
+async function expandQueuedSkill(name, arg) {
+  const pi = await resolvePi();
+  const staged = stageWithoutUpstreamPstack(AGENTS_SKILLS, adaptedNames());
+  const tmp = mkdtempSync(join(tmpdir(), "pi-sdk-"));
+  const agentDir = join(tmp, "agent");
+  writeFileSync(join(tmp, "auth.json"), "{}");
+  const modelRuntime = await pi.ModelRuntime.create({
+    authPath: join(tmp, "auth.json"),
+    modelsPath: null,
+    allowModelNetwork: false,
+    refreshOnCreate: false,
+  });
+  const settingsManager = pi.SettingsManager.inMemory();
+  const resourceLoader = new pi.DefaultResourceLoader({
+    cwd: tmp,
+    agentDir,
+    settingsManager,
+    noExtensions: true,
+    noSkills: true,
+    additionalSkillPaths: [ADAPTED_SKILLS, staged, PI_AGENT_SKILLS],
+  });
+  await resourceLoader.reload();
+  const { session } = await pi.createAgentSession({
+    cwd: tmp,
+    agentDir,
+    modelRuntime,
+    settingsManager,
+    sessionManager: pi.SessionManager.inMemory(tmp),
+    resourceLoader,
+    noTools: "all",
+  });
+  try {
+    await session.steer(`/skill:${name} ${arg}`);
+    const queued = session.getSteeringMessages();
+    assert.equal(queued.length, 1);
+    const skill = resourceLoader.getSkills().skills.find((item) => item.name === name);
+    assert.ok(skill, `${name} not visible to the session`);
+    assert.equal(
+      realpathSync(skill.filePath),
+      realpathSync(join(ADAPTED_SKILLS, name, "SKILL.md")),
+    );
+    return { expanded: queued[0], skill, arg };
+  } finally {
+    session.clearQueue();
+    session.dispose();
+  }
+ }
+
+test("/skill:correct expands via the public SDK queue path", async () => {
+  const arg = "pi-pstack-correct-probe";
+  const { expanded, skill } = await expandQueuedSkill("correct", arg);
+  assert.match(expanded, /^<skill name="correct" location="[^"]+">/);
+  assert.ok(expanded.includes(`References are relative to ${skill.baseDir}.`));
+  assert.ok(expanded.includes("Keep the rule table"));
+  assert.ok(expanded.includes("agent instruction file"));
+  assert.ok(
+    expanded.includes("../poteto-mode/references/pi-host.md"),
+    "correct expansion lost the host pointer",
+  );
+  assert.ok(expanded.endsWith(arg));
+  assert.ok(!expanded.includes("/skill:correct"));
+ });
+
+test("/skill:benchmark-checklist expands via the public SDK queue path", async () => {
+  const arg = "pi-pstack-benchmark-probe";
+  const { expanded, skill } = await expandQueuedSkill("benchmark-checklist", arg);
+  assert.match(expanded, /^<skill name="benchmark-checklist" location="[^"]+">/);
+  assert.ok(expanded.includes(`References are relative to ${skill.baseDir}.`));
+  assert.ok(expanded.includes("`nproc`"));
+  assert.ok(expanded.includes("`pidstat`"));
+  assert.ok(expanded.includes("`strace -c`"));
+  assert.ok(
+    expanded.includes("../poteto-mode/references/pi-host.md"),
+    "benchmark-checklist expansion lost the host pointer",
+  );
+  assert.ok(expanded.endsWith(arg));
+  assert.ok(!expanded.includes("/skill:benchmark-checklist"));
+ });

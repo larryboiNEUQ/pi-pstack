@@ -102,7 +102,7 @@ function generateTo(tmp, sourceDir = snapshot, extra = {}) {
 }
 
 const PI_GUIDE_BLOCK =
-  "> **Pi 适配说明（本仓库添加）**：本教程是上游 pstack 原文，针对 Cursor 编写。Pi 安装不同：先在本仓库运行 `npm run generate`，将 `adapted/skills/` 下的技能链接到 `~/.agents/skills/`（先检查同名冲突并备份），再用 `node scripts/install.mjs` 预检，经授权后加 `--apply` 安装三个 agent 与配置种子；不要在 Pi 中使用 Cursor 的 `/add-plugin pstack`。`/poteto-mode` 写作 `/skill:poteto-mode`，其他技能同理写作 `/skill:<名称>`，或在句中输入 `$<名称>`；模型配置使用 `/skill:setup-pstack`；`/loop` 改用 pi-goal 的 `/goal`；云端子代理、Cursor 自动化和持续模式不提供。完整差异见本仓库 `.scratch/pi-pstack-adaptation/spec.md`。\n\n";
+  "> **Pi 适配说明（本仓库添加）**：本教程是上游 pstack 原文，针对 Cursor 编写。Pi 安装不同：先在本仓库运行 `npm run generate`，将 `adapted/skills/` 下的技能链接到 `~/.agents/skills/`（先检查同名冲突并备份），再用 `node scripts/install.mjs` 预检，经授权后加 `--apply` 安装三个 agent 与配置种子；不要在 Pi 中使用 Cursor 的 `/add-plugin pstack`。`/poteto-mode` 写作 `/skill:poteto-mode`，其他技能同理写作 `/skill:<名称>`，或在句中输入 `$<名称>`；模型配置使用 `/skill:setup-pstack`；有界自主续跑仍用已安装的 pi-goal `/goal` 并写明停止条件；定时 `/loop` 与 `/loop 1h` 未验证，不要映射到 `/goal`，也不要另装调度器；云端子代理、Cursor 自动化和持续模式不提供。完整差异见本仓库 `.scratch/pi-pstack-adaptation/spec.md`。\n\n";
 
 function upstreamPathFor(rel) {
   if (rel === "LICENSE-pstack") return join(snapshot, "pstack/LICENSE");
@@ -143,7 +143,10 @@ test("skill set is upstream pstack skills minus excluded plus team-kit skills", 
   ].sort();
   const actual = readdirSync(join(adaptedDir, "skills")).sort();
   assert.deepEqual(actual, expected);
-  assert.equal(actual.length, 47);
+  assert.equal(actual.length, 50);
+  for (const name of ["benchmark-checklist", "correct", "principle-explain-the-number"]) {
+    assert.ok(actual.includes(name), name);
+  }
 });
 
 test("poteto-mode frontmatter name is the lowercase slug", () => {
@@ -1066,6 +1069,9 @@ test("playbook Pi hints precede the real heading and sit outside code fences", (
   for (const [file, heading] of [
     ["playbooks/multi-phase-plan.md", "### Multi-phase or multi-PR plan\n"],
     ["playbooks/orchestrate.md", "### Orchestrate\n"],
+    ["playbooks/autopilot-full.md", "### Autopilot-full\n"],
+    ["playbooks/autopilot-stack.md", "### Autopilot-stack\n"],
+    ["playbooks/opening-a-pr.md", "### Opening a PR\n"],
   ]) {
     const content = readFileSync(
       join(adaptedDir, "skills/poteto-mode", file),
@@ -1321,3 +1327,137 @@ test("fixture: declared source beneath a symlinked dir with missing leaf is refu
     /src-through-link/,
   );
 });
+
+test("pinned commit manifest version is 0.15.9", () => {
+  assert.equal(PINNED_COMMIT, "e43c7ee26e0038c6c1fa8380dd34ce86ff94cb2a");
+  const raw = execFileSync(
+    "git",
+    ["-C", DEFAULT_REPO, "show", `${PINNED_COMMIT}:pstack/.cursor-plugin/plugin.json`],
+    { encoding: "utf8" },
+  );
+  assert.equal(JSON.parse(raw).version, "0.15.9");
+  assert.equal(defaultChanges.length, 50);
+  assert.equal(
+    createHash("sha256").update(readFileSync(upstreamSetup)).digest("hex"),
+    setupChange.expectedSha256,
+  );
+ });
+
+test("bannered files are upstream text plus the host pointer", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  const playbookBanner =
+    "> Pi: Before executing this playbook, read `../references/pi-host.md` relative to this file. That mapping overrides Cursor-specific host instructions.\n\n";
+  const skillBanner =
+    "> Pi: Before executing this skill, read `../poteto-mode/references/pi-host.md`. That mapping overrides Cursor-specific host instructions.\n\n";
+  const cases = [
+    ["skills/poteto-mode/playbooks/autopilot-full.md", "pstack/skills/poteto-mode/playbooks/autopilot-full.md", "### Autopilot-full\n", playbookBanner],
+    ["skills/poteto-mode/playbooks/autopilot-stack.md", "pstack/skills/poteto-mode/playbooks/autopilot-stack.md", "### Autopilot-stack\n", playbookBanner],
+    ["skills/poteto-mode/playbooks/opening-a-pr.md", "pstack/skills/poteto-mode/playbooks/opening-a-pr.md", "### Opening a PR\n", playbookBanner],
+    ["skills/correct/SKILL.md", "pstack/skills/correct/SKILL.md", "# Correct\n", skillBanner],
+    ["skills/benchmark-checklist/SKILL.md", "pstack/skills/benchmark-checklist/SKILL.md", "# Benchmark checklist\n", skillBanner],
+  ];
+  for (const [rel, upstreamRel, anchor, banner] of cases) {
+    const upstream = readFileSync(join(snapshot, upstreamRel), "utf8");
+    assert.equal(upstream.split(anchor).length - 1, 1, anchor);
+    assert.equal(
+      readFileSync(join(adaptedDir, rel), "utf8"),
+      upstream.replace(anchor, banner + anchor),
+      rel,
+    );
+  }
+  const explainRel = "skills/principle-explain-the-number/SKILL.md";
+  assert.deepEqual(
+    readFileSync(join(adaptedDir, explainRel)),
+    readFileSync(join(snapshot, "pstack", explainRel)),
+  );
+ });
+
+test("host mapping keeps fresh agents, timed loop, and PR tool apart", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  const host = readFileSync(
+    join(adaptedDir, "skills/poteto-mode/references/pi-host.md"),
+    "utf8",
+  );
+  assert.match(host, /Fresh agents are the default/);
+  assert.match(host, /costly to move/);
+  assert.match(host, /Do not resume a running agent/);
+  assert.match(host, /Do not map it to `\/goal`/);
+  assert.match(host, /Do not install a scheduler/);
+  assert.match(host, /Do not fake a sleep loop/);
+  assert.match(host, /Pi has no built-in PR tool/);
+  assert.match(host, /Use resolved `gh`/);
+  assert.match(host, /hypothetical Cursor/);
+  assert.match(host, /The checker is structural/);
+  assert.match(host, /not proof that a live hourly timer/);
+  assert.match(host, /Do not claim the tool exists/);
+  assert.match(host, /sysctl -n hw.ncpu/);
+  assert.match(host, /strace -c/);
+  assert.match(host, /\/skill:correct/);
+  assert.match(host, /authorizes that write/);
+  assert.doesNotMatch(host, /\/loop or autonomous-run \| Existing pi-goal/);
+  const agent = readFileSync(join(adaptedDir, "agents/poteto-agent.md"), "utf8");
+  assert.equal(
+    agent,
+    readFileSync(join(adaptationDir, "files/agents/poteto-agent.md"), "utf8"),
+  );
+  assert.doesNotMatch(agent, /Spawn a fresh `poteto-agent`/);
+ });
+
+test("check-plan stays a structural /loop 1h marker check", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  const checker = join(adaptedDir, "skills/poteto-mode/scripts/check-plan.mjs");
+  assert.deepEqual(
+    readFileSync(checker),
+    readFileSync(join(snapshot, "pstack/skills/poteto-mode/scripts/check-plan.mjs")),
+  );
+  const plan = readFileSync(
+    join(adaptedDir, "skills/poteto-mode/playbooks/multi-phase-plan.md"),
+    "utf8",
+  );
+  assert.match(plan, /arm the audit tick as `\/loop 1h`/);
+  const skeleton = [
+    "---",
+    "---",
+    "# Title",
+    "",
+    "## How to read this",
+    "",
+    "## Program checklist",
+    "",
+    "### Arm the program",
+    "",
+    "- [ ] git show origin/main:example",
+    "- [ ] MARKER",
+    "- [ ] status message",
+    "",
+    "### Spawn owners",
+    "### PR mechanics",
+    "### Verdict and merge",
+    "### Boot recipe",
+    "",
+    "## PR one",
+    "",
+    "## Close the program",
+    "",
+  ].join("\n");
+  const withLoop = join(tmp, "loop.md");
+  const withGoal = join(tmp, "goal.md");
+  writeFileSync(withLoop, skeleton.replace("MARKER", "/loop 1h"));
+  writeFileSync(withGoal, skeleton.replace("MARKER", "/goal"));
+  const run = (file) => {
+    try {
+      execFileSync("node", [checker, file], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      return "";
+    } catch (error) {
+      return `${error.stdout ?? ""}\n${error.stderr ?? ""}`;
+    }
+  };
+  assert.equal(run(withLoop).includes('lacks "/loop 1h"'), false);
+  assert.equal(run(withGoal).includes('lacks "/loop 1h"'), true);
+ });

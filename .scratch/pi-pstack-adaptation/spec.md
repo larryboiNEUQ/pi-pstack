@@ -88,7 +88,7 @@
 
 ### 内容源
 
-- 上游快照固定为官方 cursor/plugins 在 2026-10-02 查询并获取的 HEAD `c47b12849e43f18d5c374c7069c744cc55b0ea00`，pstack 版本仍为 0.15.5（Issue 09；选定输入无变化，依据 lead 冻结审计）。
+- 上游快照固定为官方 cursor/plugins 提交 `e43c7ee26e0038c6c1fa8380dd34ce86ff94cb2a`，pstack manifest 版本 0.15.9。生成包 50 个技能：上游新增 correct、benchmark-checklist、principle-explain-the-number，仍排除 make-bot-ui、tdd、teach，仍带入 deslop、control-cli、control-ui。这不是对未来 HEAD 的动态跟踪。Issue 09 对旧 pin `c47b12849e43f18d5c374c7069c744cc55b0ea00`（0.15.5）的记录仍是当时证据。
 - 从同一仓库的 cursor-team-kit 原样带入 deslop、control-cli、control-ui。三者为 MIT 许可，不依赖 Cursor。
 - 跟进上游最新版本另开 Issue。
 
@@ -104,7 +104,7 @@
 
 - poteto-mode 的技能名改为 `poteto-mode`。
 - 排除 make-bot-ui。
-- 在约 15 个调用子代理、提问或读取模型配置的文件开头插入一行：在 Pi 上先读映射说明。涉及 poteto-mode、how、why、swarm、arena、interrogate、reflect、architect、figure-it-out、no-comments、automate-me、technical-writing、principle-prove-it-works，以及 multi-phase-plan、orchestrate 两个 playbook。
+- 在调用子代理、提问、读取模型配置或新增宿主指令的文件开头插入一行，要求在 Pi 上先读映射说明。涉及 poteto-mode、how、why、swarm、arena、interrogate、reflect、architect、figure-it-out、no-comments、automate-me、technical-writing、principle-prove-it-works、correct、benchmark-checklist，以及 multi-phase-plan、orchestrate、autopilot-full、autopilot-stack、opening-a-pr 这些 playbook。
 - recall、reflect、show-me-your-work 的会话记录位置改为 Pi 会话目录。
 - create-verification-skill 的写入位置改为 Pi 能发现的项目技能目录。
 - no-comments 调用的 agent 名改为 `comment-sicko`。
@@ -123,12 +123,15 @@
 | `Comment Sicko` | `comment-sicko` |
 | `model` | 模型表中该角色的 `provider/model`，`:` 后缀拆为 `thinking` |
 | 角色缺失、`auto`、`inherit-parent` | 不传 `model`，使用主模型 |
-| `run_in_background`、resume | 同名参数；`get_subagent_result`；`steer_subagent` |
+| `run_in_background` | 顶层委派用 `run_in_background: true`；完成结果用 `get_subagent_result`；运行中用 `steer_subagent` |
+| resume | 默认新开 Agent。只在必须保住昂贵本地状态时，用返回的 ID 续接已完成的 agent |
 | `environment: "cloud"` | 本地运行；并行写文件时 `isolation: "worktree"` |
 | `AskQuestion` | `ask_user_question` |
 | todolist | Markdown 清单 |
 | `pstack-models.mdc` | 模型表 |
-| `/loop`、自主运行 | `/goal` |
+| 有界自主续跑 | 已安装的 pi-goal `/goal`，必须写明停止条件。这不是小时计时器 |
+| 定时 `/loop` 与 `/loop 1h` | 不提供，未验证，不映射到 `/goal`，不新增调度器 |
+| 内置 PR 工具 | 当前没有。用已解析的 `gh`，不要调用假设的 Cursor 工具 |
 | control-ui（Web） | ego-browser |
 | control-ui（Electron、IDE） | control-ui |
 | create-skill | writing-for-agents |
@@ -136,7 +139,7 @@
 | 兄弟技能和原则技能 | 按 `<本技能目录>/../<技能名>/SKILL.md` 读取 |
 | 回退 | 回退规则：主模型重跑一次，回复中写明 |
 
-映射说明列出不提供的能力：持续模式、后台路由到 poteto-agent、云端子代理、make-bot-ui、Cursor 自动化。
+映射说明列出不提供的能力：定时 `/loop`、内置 PR 工具、持续模式、后台路由到 poteto-agent、云端子代理、make-bot-ui、Cursor 自动化。
 
 ### Agent 文件
 
