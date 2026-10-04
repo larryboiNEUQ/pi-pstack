@@ -10,4 +10,4 @@
 
 When a skill names a canonical role, use its tracker label.
 
-For local Markdown issues, record the label in the `Status:` line. Wayfinder child lifecycle statuses are defined separately in `issue-tracker.md`.
+GitHub issue state is the tracker for open and completed work. Apply triage labels to GitHub issues rather than recording them in local Markdown. Dependency and assignment conventions are defined in `issue-tracker.md`.

@@ -8,7 +8,7 @@ When CI does not exist, record it as unavailable rather than claiming a pass.
 
 ### Issue tracker
 
-Local Markdown issues live under `.scratch/`. See `docs/agents/issue-tracker.md`.
+GitHub Issues are the source of truth for specs and tickets at https://github.com/larryboiNEUQ/pi-pstack/issues. Read `docs/agents/issue-tracker.md` when creating, fetching, or updating a ticket.
 
 ### Triage labels
 
