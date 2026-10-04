@@ -6,9 +6,21 @@ When CI does not exist, record it as unavailable rather than claiming a pass.
 
 ## Agent skills
 
+### Workflow
+
+`poteto-mode` is the default execution mode for the agent reading this file and working in this repository.
+
+The user invokes these skills:
+
+- `wayfinder` to chart a large effort as decision tickets while the route is unclear.
+- `to-spec` to turn the current conversation into a spec.
+- `to-tickets` to turn a plan or spec into tickets.
+
+`to-spec` then `to-tickets` stays the recording path. `poteto-mode` does not take their place.
+
 ### Issue tracker
 
-Local Markdown issues live under `.scratch/`. See `docs/agents/issue-tracker.md`.
+GitHub Issues are the source of truth for specs and tickets at https://github.com/larryboiNEUQ/pi-pstack/issues. Read `docs/agents/issue-tracker.md` when creating, fetching, or updating a ticket.
 
 ### Triage labels
 
