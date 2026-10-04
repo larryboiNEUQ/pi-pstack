@@ -8,9 +8,15 @@ When CI does not exist, record it as unavailable rather than claiming a pass.
 
 ### Workflow
 
-- poteto-mode: how the project agent executes
-- wayfinder: early / front-end planning
-- to-spec + to-issue: task recording. Keep this path. Do not replace it.
+`poteto-mode` is how the project agent executes. It is the default execution mode.
+
+The user invokes these skills:
+
+- `wayfinder` to chart a large effort as decision tickets while the route is unclear.
+- `to-spec` to turn the current conversation into a spec.
+- `to-tickets` to turn a plan or spec into tickets.
+
+`to-spec` then `to-tickets` stays the recording path. `poteto-mode` does not take their place.
 
 ### Issue tracker
 
