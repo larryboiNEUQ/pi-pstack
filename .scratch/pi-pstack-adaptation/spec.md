@@ -88,7 +88,7 @@
 
 ### 内容源
 
-- 上游快照固定为官方 cursor/plugins 提交 `e43c7ee26e0038c6c1fa8380dd34ce86ff94cb2a`，pstack manifest 版本 0.15.9。生成包 50 个技能：上游新增 correct、benchmark-checklist、principle-explain-the-number，仍排除 make-bot-ui、tdd、teach，仍带入 deslop、control-cli、control-ui。这不是对未来 HEAD 的动态跟踪。Issue 09 对旧 pin `c47b12849e43f18d5c374c7069c744cc55b0ea00`（0.15.5）的记录仍是当时证据。
+- 上游快照固定为官方 cursor/plugins 提交 `e43c7ee26e0038c6c1fa8380dd34ce86ff94cb2a`，pstack manifest 版本 0.15.9。生成包 52 个技能：上游新增 correct、benchmark-checklist、principle-explain-the-number，仍排除 make-bot-ui 以及裸名 tdd、teach，仍带入 deslop、control-cli、control-ui。上游 tdd 和 teach 正文另以 `pstack-tdd`、`pstack-teach` 复制进包，目录名和 frontmatter 名一起改，避免与用户裸名技能碰撞。这不是对未来 HEAD 的动态跟踪。Issue 09 对旧 pin `c47b12849e43f18d5c374c7069c744cc55b0ea00`（0.15.5）的记录仍是当时证据。
 - 从同一仓库的 cursor-team-kit 原样带入 deslop、control-cli、control-ui。三者为 MIT 许可，不依赖 Cursor。
 - 跟进上游最新版本另开 Issue。
 
@@ -109,7 +109,7 @@
 - create-verification-skill 的写入位置改为 Pi 能发现的项目技能目录。
 - no-comments 调用的 agent 名改为 `comment-sicko`。
 - setup-pstack 整篇替换。
-- 其他上游文本不改。上游 frontmatter 中的 `mode` 和 `reminder` 保留，Pi 忽略它们。
+- 其他上游文本不改，例外只有声明式清单里的锚点改动。同一 PR 的例外是 bug-fix 指向 `pstack-tdd`，以及教程里指向 `pstack-tdd` / `pstack-teach` 的命令和链接。上游 frontmatter 中的 `mode` 和 `reminder` 保留，Pi 忽略它们。复制进包的 tdd/teach 仍保留 `disable-model-invocation: true`。
 
 ### 映射说明
 

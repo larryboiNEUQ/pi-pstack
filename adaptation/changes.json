@@ -27,6 +27,148 @@
       "reason": "The user's existing teach skill takes precedence; shipping this would collide on the same name."
     },
     {
+      "id": "copy-pstack-tdd",
+      "op": "copy-upstream",
+      "target": "skills/pstack-tdd/SKILL.md",
+      "source": "pstack/skills/tdd/SKILL.md",
+      "reason": "Ship the upstream tdd text under a prefixed name so the user's bare tdd skill keeps its name."
+    },
+    {
+      "id": "copy-pstack-teach",
+      "op": "copy-upstream",
+      "target": "skills/pstack-teach/SKILL.md",
+      "source": "pstack/skills/teach/SKILL.md",
+      "reason": "Ship the upstream teach text under a prefixed name so the user's bare teach skill keeps its name."
+    },
+    {
+      "id": "rename-pstack-tdd",
+      "op": "replace",
+      "target": "skills/pstack-tdd/SKILL.md",
+      "anchor": "name: tdd",
+      "text": "name: pstack-tdd",
+      "reason": "Frontmatter name must match the prefixed directory or Pi collides with the user's tdd skill."
+    },
+    {
+      "id": "rename-pstack-teach",
+      "op": "replace",
+      "target": "skills/pstack-teach/SKILL.md",
+      "anchor": "name: teach",
+      "text": "name: pstack-teach",
+      "reason": "Frontmatter name must match the prefixed directory or Pi collides with the user's teach skill."
+    },
+    {
+      "id": "map-pstack-tdd-host",
+      "op": "insert-before",
+      "target": "skills/pstack-tdd/SKILL.md",
+      "anchor": "# TDD Bug Fix\n",
+      "text": "> Pi: Before executing this skill, read `../poteto-mode/references/pi-host.md`. That mapping overrides Cursor-specific host instructions.\n\n",
+      "reason": "Point the prefixed tdd skill at the Pi host mapping before its workflow."
+    },
+    {
+      "id": "map-pstack-teach-host",
+      "op": "insert-before",
+      "target": "skills/pstack-teach/SKILL.md",
+      "anchor": "# Teach\n",
+      "text": "> Pi: Before executing this skill, read `../poteto-mode/references/pi-host.md`. That mapping overrides Cursor-specific host instructions. Dispatch `how` and `why` on their existing role lines. Do not add a teach role. If the user did not authorize a raster, draw mermaid instead of calling image generation.\n\n",
+      "reason": "Point pstack-teach at the host mapping, existing how/why roles, and mermaid unless a raster was authorized."
+    },
+    {
+      "id": "retarget-bugfix-pstack-tdd",
+      "op": "replace",
+      "target": "skills/poteto-mode/playbooks/bug-fix.md",
+      "anchor": "See the **tdd** skill",
+      "text": "See the **pstack-tdd** skill",
+      "reason": "The packaged bug-fix playbook always uses pstack-tdd, not the user's bare tdd skill."
+    },
+    {
+      "id": "guide-readme-pstack-teach",
+      "op": "replace",
+      "target": "upstream-guide/README.md",
+      "anchor": "`/how`, `/why`, `/teach`, and `/recall` before you edit anything.",
+      "text": "`/how`, `/why`, `/pstack-teach`, and `/recall` before you edit anything.",
+      "reason": "The guide command must name the packaged skill, not the excluded bare teach source."
+    },
+    {
+      "id": "guide-readme-pstack-tdd",
+      "op": "replace",
+      "target": "upstream-guide/README.md",
+      "anchor": "The build playbooks, `/tdd`, `/unslop`, and `/no-comments`.",
+      "text": "The build playbooks, `/pstack-tdd`, `/unslop`, and `/no-comments`.",
+      "reason": "The guide command must name the packaged skill, not the excluded bare tdd source."
+    },
+    {
+      "id": "guide-understand-teach-blurb",
+      "op": "replace",
+      "target": "upstream-guide/03-understand.md",
+      "anchor": "`/teach` blends both into one explanation.",
+      "text": "`/pstack-teach` blends both into one explanation.",
+      "reason": "Retarget the understand-page command to the packaged skill."
+    },
+    {
+      "id": "guide-understand-teach-heading",
+      "op": "replace",
+      "target": "upstream-guide/03-understand.md",
+      "anchor": "## Actually understand it with `/teach`",
+      "text": "## Actually understand it with `/pstack-teach`",
+      "reason": "Retarget the understand-page heading to the packaged skill."
+    },
+    {
+      "id": "guide-understand-teach-prompt",
+      "op": "replace",
+      "target": "upstream-guide/03-understand.md",
+      "anchor": "/teach me how this PR changes retries. convince me it fixes the cause and not the symptom.",
+      "text": "/pstack-teach me how this PR changes retries. convince me it fixes the cause and not the symptom.",
+      "reason": "Retarget the sample prompt to the packaged skill."
+    },
+    {
+      "id": "guide-understand-teach-link",
+      "op": "replace",
+      "target": "upstream-guide/03-understand.md",
+      "anchor": "[`/teach`](../../skills/teach/SKILL.md)",
+      "text": "[`/pstack-teach`](../../skills/pstack-teach/SKILL.md)",
+      "reason": "Point the understand-page link at the namespaced skill file."
+    },
+    {
+      "id": "guide-build-tdd-heading",
+      "op": "replace",
+      "target": "upstream-guide/05-build-and-clean.md",
+      "anchor": "## Write the failing test first with `/tdd`",
+      "text": "## Write the failing test first with `/pstack-tdd`",
+      "reason": "Retarget the build-page heading to the packaged skill."
+    },
+    {
+      "id": "guide-build-tdd-prompt",
+      "op": "replace",
+      "target": "upstream-guide/05-build-and-clean.md",
+      "anchor": "/tdd implement",
+      "text": "/pstack-tdd implement",
+      "reason": "Retarget the sample prompt to the packaged skill."
+    },
+    {
+      "id": "guide-build-tdd-link",
+      "op": "replace",
+      "target": "upstream-guide/05-build-and-clean.md",
+      "anchor": "[`/tdd`](../../skills/tdd/SKILL.md)",
+      "text": "[`/pstack-tdd`](../../skills/pstack-tdd/SKILL.md)",
+      "reason": "Point the build-page link at the namespaced skill file."
+    },
+    {
+      "id": "guide-recipes-tdd-alt",
+      "op": "replace",
+      "target": "upstream-guide/10-recipes-and-pitfalls.md",
+      "anchor": "pinned cards reading /how, /tdd, and /loop above the counter.",
+      "text": "pinned cards reading /how, /pstack-tdd, and /loop above the counter.",
+      "reason": "Relabel the tutorial image alt text. The image file itself stays the upstream pixels."
+    },
+    {
+      "id": "guide-recipes-tdd-prompt",
+      "op": "replace",
+      "target": "upstream-guide/10-recipes-and-pitfalls.md",
+      "anchor": "if there's a cheap test path, /tdd it. then fix and rerun.",
+      "text": "if there's a cheap test path, /pstack-tdd it. then fix and rerun.",
+      "reason": "Retarget the recipe prompt to the packaged skill."
+    },
+    {
       "id": "guide-pi-difference-note",
       "op": "insert-before",
       "target": "upstream-guide/README.md",

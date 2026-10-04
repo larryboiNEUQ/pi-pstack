@@ -64,6 +64,23 @@ function assertChangeOccursOnce(content, change) {
   assert.equal(occurrences, 1, `${change.id}: text occurs ${occurrences} times in ${change.target}`);
 }
 
+function applyTextOps(content, target) {
+  let next = content;
+  for (const change of defaultChanges) {
+    if (change.target !== target) continue;
+    if (!["replace", "insert-before", "insert-after"].includes(change.op)) continue;
+    const occurrences = next.split(change.anchor).length - 1;
+    assert.equal(occurrences, 1, `${change.id}: anchor occurs ${occurrences} times`);
+    if (change.op === "replace") next = next.replace(change.anchor, change.text);
+    else if (change.op === "insert-before") {
+      next = next.replace(change.anchor, change.text + change.anchor);
+    } else {
+      next = next.replace(change.anchor, change.anchor + change.text);
+    }
+  }
+  return next;
+}
+
 function assertTreesIdentical(a, b) {
   const filesA = walkFiles(a).map((p) => relative(a, p));
   const filesB = walkFiles(b).map((p) => relative(b, p));
@@ -137,13 +154,21 @@ test("skill set is upstream pstack skills minus excluded plus team-kit skills", 
   })
     .filter((e) => e.isDirectory())
     .map((e) => e.name);
+  const namespaced = defaultChanges
+    .filter((c) => c.op === "copy-upstream" && /^skills\/[^/]+\/SKILL\.md$/.test(c.target))
+    .map((c) => c.target.split("/")[1]);
   const expected = [
     ...upstream.filter((n) => !EXCLUDED.includes(n)),
     ...TEAM_KIT_SKILLS,
+    ...namespaced,
   ].sort();
   const actual = readdirSync(join(adaptedDir, "skills")).sort();
+  assert.deepEqual(
+    defaultChanges.filter((c) => c.op === "exclude").map((c) => c.target.slice("skills/".length)).sort(),
+    [...EXCLUDED].sort(),
+  );
   assert.deepEqual(actual, expected);
-  assert.equal(actual.length, 50);
+  assert.equal(actual.length, 52);
   for (const name of ["benchmark-checklist", "correct", "principle-explain-the-number"]) {
     assert.ok(actual.includes(name), name);
   }
@@ -173,13 +198,19 @@ test("generated host reference resolves external tdd/teach via catalog with fall
     "utf8",
   );
   assert.ok(
-    host.includes("`tdd` and `teach` are intentionally external"),
-    "host text must name tdd and teach as external",
+    host.includes("Bare `tdd` and `teach` stay the user's existing Matt Pocock skills"),
+    "host text must keep bare tdd and teach as the user's skills",
   );
   assert.ok(
     host.includes("advertised skill catalog"),
     "host text must require the host's skill catalog",
   );
+  assert.ok(host.includes("always uses `pstack-tdd`"));
+  assert.ok(host.includes("Do not add a teach role"));
+  assert.ok(host.includes("draw mermaid"));
+  assert.ok(host.includes("Codex image generation"));
+  assert.ok(existsSync(join(adaptedDir, "skills/pstack-tdd/SKILL.md")));
+  assert.ok(existsSync(join(adaptedDir, "skills/pstack-teach/SKILL.md")));
   assert.ok(
     host.includes("~/.agents/skills/<name>/SKILL.md"),
     "host text must include the shared skills fallback path",
@@ -243,7 +274,8 @@ test("guide preface covers Pi installation differences only", () => {
     join(snapshot, "pstack/docs/guide/README.md"),
     "utf8",
   );
-  assert.equal(readme, PI_GUIDE_BLOCK + upstream);
+  assert.equal(readme, applyTextOps(upstream, "upstream-guide/README.md"));
+  assert.ok(readme.startsWith(PI_GUIDE_BLOCK));
 });
 
 test("every declared text change lands exactly once", () => {
@@ -274,7 +306,17 @@ test("every file not targeted by a change is byte-identical to upstream", () => 
     const r = relative(adaptedDir, rel);
     const upstreamPath = upstreamPathFor(r);
     if (CHANGED_TARGETS.has(r)) {
-      if (upstreamPath && existsSync(upstreamPath)) {
+      const ops = defaultChanges.filter((c) => c.target === r);
+      const textOnly = ops.length > 0 && ops.every((c) =>
+        ["replace", "insert-before", "insert-after"].includes(c.op),
+      );
+      if (textOnly && upstreamPath && existsSync(upstreamPath)) {
+        assert.equal(
+          readFileSync(rel, "utf8"),
+          applyTextOps(readFileSync(upstreamPath, "utf8"), r),
+          r,
+        );
+      } else if (upstreamPath && existsSync(upstreamPath)) {
         assert.notDeepEqual(readFileSync(rel), readFileSync(upstreamPath));
       }
       continue;
@@ -301,9 +343,16 @@ test("every file not targeted by a change is byte-identical to upstream", () => 
       continue;
     }
     const upstreamPath = join(snapshot, "pstack/docs/guide", r);
-    if (r === "README.md") {
-      const expected = PI_GUIDE_BLOCK + readFileSync(upstreamPath, "utf8");
-      assert.equal(readFileSync(rel, "utf8"), expected);
+    const declared = `upstream-guide/${r}`;
+    const textOps = defaultChanges.filter(
+      (c) => c.target === declared && ["replace", "insert-before", "insert-after"].includes(c.op),
+    );
+    if (textOps.length > 0) {
+      assert.equal(
+        readFileSync(rel, "utf8"),
+        applyTextOps(readFileSync(upstreamPath, "utf8"), declared),
+        r,
+      );
       continue;
     }
     assert.deepEqual(readFileSync(rel), readFileSync(upstreamPath), r);
@@ -635,9 +684,46 @@ function buildFixture() {
   };
   put("pstack/skills/poteto-mode/SKILL.md", "---\nname: Poteto Mode\n---\n");
   put("pstack/skills/make-bot-ui/SKILL.md", "---\nname: make-bot-ui\n---\n");
-  put("pstack/skills/tdd/SKILL.md", "---\nname: tdd\n---\n");
-  put("pstack/skills/teach/SKILL.md", "---\nname: teach\n---\n");
-  put("pstack/docs/guide/README.md", "# The pstack guide\n\nbody\n");
+  put("pstack/skills/tdd/SKILL.md", "---\nname: tdd\n---\n\n# TDD Bug Fix\n");
+  put("pstack/skills/teach/SKILL.md", "---\nname: teach\n---\n\n# Teach\n");
+  put("pstack/skills/poteto-mode/playbooks/bug-fix.md", "See the **tdd** skill\n");
+  put(
+    "pstack/docs/guide/README.md",
+    [
+      "# The pstack guide",
+      "",
+      "`/how`, `/why`, `/teach`, and `/recall` before you edit anything.",
+      "The build playbooks, `/tdd`, `/unslop`, and `/no-comments`.",
+      "",
+    ].join("\n"),
+  );
+  put(
+    "pstack/docs/guide/03-understand.md",
+    [
+      "`/teach` blends both into one explanation.",
+      "## Actually understand it with `/teach`",
+      "/teach me how this PR changes retries. convince me it fixes the cause and not the symptom.",
+      "[`/teach`](../../skills/teach/SKILL.md)",
+      "",
+    ].join("\n"),
+  );
+  put(
+    "pstack/docs/guide/05-build-and-clean.md",
+    [
+      "## Write the failing test first with `/tdd`",
+      "/tdd implement",
+      "[`/tdd`](../../skills/tdd/SKILL.md)",
+      "",
+    ].join("\n"),
+  );
+  put(
+    "pstack/docs/guide/10-recipes-and-pitfalls.md",
+    [
+      "pinned cards reading /how, /tdd, and /loop above the counter.",
+      "if there's a cheap test path, /tdd it. then fix and rerun.",
+      "",
+    ].join("\n"),
+  );
   put("pstack/LICENSE", "pstack license\n");
   put("pstack/agents/comment-sicko.md", "---\nname: Comment Sicko\n---\n\nbody\n");
   for (const name of TEAM_KIT_SKILLS) {
@@ -1336,7 +1422,6 @@ test("pinned commit manifest version is 0.15.9", () => {
     { encoding: "utf8" },
   );
   assert.equal(JSON.parse(raw).version, "0.15.9");
-  assert.equal(defaultChanges.length, 50);
   assert.equal(
     createHash("sha256").update(readFileSync(upstreamSetup)).digest("hex"),
     setupChange.expectedSha256,
@@ -1418,46 +1503,170 @@ test("check-plan stays a structural /loop 1h marker check", () => {
     "utf8",
   );
   assert.match(plan, /arm the audit tick as `\/loop 1h`/);
-  const skeleton = [
-    "---",
-    "---",
-    "# Title",
+  const rule = "Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.";
+  const lanes = Array.from({ length: 10 }, (_, i) => {
+    const n = i + 1;
+    return `- [ ] Lane ${n}. Save \`lane-${n}.png\`. Pass when the row count matches.`;
+  }).join("\n");
+  const planFor = (marker) => [
+    "# Row plan",
+    "",
+    "Fix the duplicate row for the operator.",
     "",
     "## How to read this",
+    "",
+    "One box is one unit of work. Every box names the evidence that checks it. Check a box only when its evidence exists.",
+    "",
+    "The program runs `playbooks/autopilot-stack.md`.",
+    "",
+    rule,
     "",
     "## Program checklist",
     "",
     "### Arm the program",
     "",
-    "- [ ] git show origin/main:example",
-    "- [ ] MARKER",
-    "- [ ] status message",
+    "- [ ] `git show origin/main:playbooks/autopilot-stack.md`",
+    `- [ ] ${marker}`,
+    "- [ ] Post a status message when the audit finds a change.",
     "",
     "### Spawn owners",
+    "",
     "### PR mechanics",
+    "",
     "### Verdict and merge",
+    "",
     "### Boot recipe",
     "",
-    "## PR one",
+    "## Fix the row",
+    "",
+    "**Depends on.** None.",
+    "",
+    "**Files.**",
+    "",
+    "- [ ] Edit `src/app.mjs`.",
+    "",
+    "**Build.**",
+    "",
+    "- [ ] Add the row check.",
+    "",
+    "**You see.**",
+    "",
+    "- [ ] The log line `saved` appears.",
+    "",
+    `**Verify, unit.** ${rule}`,
+    "",
+    "- [ ] Run `node --test test/row.test.mjs`.",
+    "",
+    `**Verify, live.** ${rule} Ten lanes on \`gpt-5.5\` at the PR head.`,
+    "",
+    lanes,
+    "",
+    `**Verify, perf.** ${rule}`,
+    "",
+    "- [ ] Metric. row count",
+    "- [ ] Probe. node --test test/row.test.mjs",
+    "- [ ] Baseline. Record the trunk value first.",
+    "- [ ] Rule. Head must not exceed trunk.",
+    "",
+    "**Review gate.** None.",
+    "",
+    "**Merge.**",
+    "",
+    "- [ ] Root verdict at the head SHA.",
     "",
     "## Close the program",
+    "",
+    "- [ ] Every box above is checked with its evidence.",
+    "",
+    "## Appendix A. Prototype evidence",
+    "",
+    "The prototype branch recorded the duplicate row.",
     "",
   ].join("\n");
   const withLoop = join(tmp, "loop.md");
   const withGoal = join(tmp, "goal.md");
-  writeFileSync(withLoop, skeleton.replace("MARKER", "/loop 1h"));
-  writeFileSync(withGoal, skeleton.replace("MARKER", "/goal"));
+  writeFileSync(withLoop, planFor("/loop 1h"));
+  writeFileSync(withGoal, planFor("/goal"));
   const run = (file) => {
     try {
-      execFileSync("node", [checker, file], {
+      const stdout = execFileSync("node", [checker, file], {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       });
-      return "";
+      return { status: 0, stdout, stderr: "" };
     } catch (error) {
-      return `${error.stdout ?? ""}\n${error.stderr ?? ""}`;
+      return {
+        status: error.status ?? 1,
+        stdout: `${error.stdout ?? ""}`,
+        stderr: `${error.stderr ?? ""}`,
+      };
     }
   };
-  assert.equal(run(withLoop).includes('lacks "/loop 1h"'), false);
-  assert.equal(run(withGoal).includes('lacks "/loop 1h"'), true);
- });
+  const pass = run(withLoop);
+  assert.equal(pass.status, 0);
+  assert.match(pass.stdout, /1 PR sections, 0 problems/);
+  const fail = run(withGoal);
+  assert.equal(fail.status, 1);
+  assert.match(fail.stdout, /1 PR sections, 1 problems/);
+  assert.match(fail.stderr, /Program checklist lacks "\/loop 1h"/);
+});
+
+test("namespaced tdd and teach are upstream files plus declared name and banner", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir } = generateTo(tmp);
+  for (const name of ["tdd", "teach"]) {
+    const target = `skills/pstack-${name}/SKILL.md`;
+    const upstream = readFileSync(join(snapshot, `pstack/skills/${name}/SKILL.md`), "utf8");
+    const generatedPath = join(adaptedDir, target);
+    assert.equal(readFileSync(generatedPath, "utf8"), applyTextOps(upstream, target));
+    assert.match(frontmatter(generatedPath), new RegExp(`^name: pstack-${name}$`, "m"));
+    assert.match(frontmatter(generatedPath), /^disable-model-invocation: true$/m);
+    assert.deepEqual(readdirSync(dirname(generatedPath)), ["SKILL.md"]);
+    assert.ok(!existsSync(join(adaptedDir, "skills", name)));
+  }
+  const bugfixPath = "skills/poteto-mode/playbooks/bug-fix.md";
+  const bugfix = readFileSync(join(adaptedDir, bugfixPath), "utf8");
+  assert.equal(
+    bugfix,
+    applyTextOps(readFileSync(join(snapshot, "pstack", bugfixPath), "utf8"), bugfixPath),
+  );
+  assert.match(bugfix, /See the \*\*pstack-tdd\*\* skill/);
+  assert.doesNotMatch(bugfix, /See the \*\*tdd\*\* skill/);
+});
+
+test("tutorial commands and links resolve to namespaced skill files", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-"));
+  const { adaptedDir, guideDir } = generateTo(tmp);
+  const linked = [
+    ["03-understand.md", "../../skills/pstack-teach/SKILL.md", "pstack-teach"],
+    ["05-build-and-clean.md", "../../skills/pstack-tdd/SKILL.md", "pstack-tdd"],
+  ];
+  for (const [file, href, name] of linked) {
+    const text = readFileSync(join(guideDir, file), "utf8");
+    assert.ok(text.includes(href), file);
+    assert.ok(!text.includes(`../../skills/${name.slice("pstack-".length)}/SKILL.md`), file);
+    const suffix = href.replace(/^(\.\.\/)+/, "");
+    assert.equal(suffix, `skills/${name}/SKILL.md`);
+    const dest = join(adaptedDir, suffix);
+    assert.equal(realpathSync(dest), realpathSync(join(adaptedDir, "skills", name, "SKILL.md")));
+  }
+  const recipes = readFileSync(join(guideDir, "10-recipes-and-pitfalls.md"), "utf8");
+  assert.ok(recipes.includes("/pstack-tdd"));
+  assert.ok(recipes.includes("(./images/recipes.jpg)"));
+  assert.deepEqual(
+    readFileSync(join(guideDir, "images/recipes.jpg")),
+    readFileSync(join(snapshot, "pstack/docs/guide/images/recipes.jpg")),
+  );
+  const bare = /(^|[^A-Za-z-])\/(tdd|teach)(?![A-Za-z-])/;
+  for (const file of [
+    "README.md",
+    "03-understand.md",
+    "05-build-and-clean.md",
+    "10-recipes-and-pitfalls.md",
+  ]) {
+    const text = readFileSync(join(guideDir, file), "utf8");
+    assert.doesNotMatch(text, /skills\/tdd\/SKILL\.md/, file);
+    assert.doesNotMatch(text, /skills\/teach\/SKILL\.md/, file);
+    assert.doesNotMatch(text, bare, file);
+  }
+});

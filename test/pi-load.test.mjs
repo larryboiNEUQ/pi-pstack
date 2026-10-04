@@ -227,7 +227,7 @@ async function expandQueuedSkill(name, arg) {
     session.clearQueue();
     session.dispose();
   }
- }
+}
 
 test("/skill:correct expands via the public SDK queue path", async () => {
   const arg = "pi-pstack-correct-probe";
@@ -242,7 +242,7 @@ test("/skill:correct expands via the public SDK queue path", async () => {
   );
   assert.ok(expanded.endsWith(arg));
   assert.ok(!expanded.includes("/skill:correct"));
- });
+});
 
 test("/skill:benchmark-checklist expands via the public SDK queue path", async () => {
   const arg = "pi-pstack-benchmark-probe";
@@ -258,4 +258,179 @@ test("/skill:benchmark-checklist expands via the public SDK queue path", async (
   );
   assert.ok(expanded.endsWith(arg));
   assert.ok(!expanded.includes("/skill:benchmark-checklist"));
- });
+});
+
+function userSkillFile(name) {
+  return join(AGENTS_SKILLS, name, "SKILL.md");
+}
+
+function snapshotUserBytes() {
+  return new Map(
+    ["tdd", "teach"].map((name) => {
+      const file = userSkillFile(name);
+      assert.ok(existsSync(file), file);
+      return [file, readFileSync(file)];
+    }),
+  );
+}
+
+function assertUserBytes(before) {
+  for (const [file, bytes] of before) {
+    assert.deepEqual(readFileSync(file), bytes, file);
+  }
+}
+
+function linkUserSkills(tmp) {
+  const root = join(tmp, "user-skills");
+  mkdirSync(root);
+  for (const name of ["tdd", "teach"]) {
+    symlinkSync(join(AGENTS_SKILLS, name), join(root, name));
+  }
+  return root;
+}
+
+test("prefixed package skills coexist with the original user tdd and teach files", async () => {
+  const before = snapshotUserBytes();
+  const tmp = mkdtempSync(join(tmpdir(), "pi-coexist-"));
+  const userRoot = linkUserSkills(tmp);
+  const { loadSkills } = await resolvePi();
+  const { skills, diagnostics } = loadSkills({
+    cwd: tmp,
+    agentDir: join(tmp, "agent"),
+    skillPaths: [ADAPTED_SKILLS, userRoot],
+    includeDefaults: false,
+  });
+  assertUserBytes(before);
+  assert.deepEqual(diagnostics.filter((d) => d.type === "collision"), []);
+  const expected = {
+    tdd: userSkillFile("tdd"),
+    teach: userSkillFile("teach"),
+    "pstack-tdd": join(ADAPTED_SKILLS, "pstack-tdd/SKILL.md"),
+    "pstack-teach": join(ADAPTED_SKILLS, "pstack-teach/SKILL.md"),
+  };
+  for (const [name, file] of Object.entries(expected)) {
+    const found = skills.filter((skill) => skill.name === name);
+    assert.equal(found.length, 1, name);
+    assert.equal(realpathSync(found[0].filePath), realpathSync(file), name);
+    assert.deepEqual(readFileSync(found[0].filePath), readFileSync(file));
+  }
+});
+
+test("directory rename without frontmatter rename collides with the user skills", async () => {
+  const before = snapshotUserBytes();
+  const tmp = mkdtempSync(join(tmpdir(), "pi-collide-"));
+  const userRoot = linkUserSkills(tmp);
+  const wrong = join(tmp, "wrong-skills");
+  for (const name of ["tdd", "teach"]) {
+    const dir = join(wrong, `pstack-${name}`);
+    mkdirSync(dir, { recursive: true });
+    const text = readFileSync(join(ADAPTED_SKILLS, `pstack-${name}/SKILL.md`), "utf8");
+    const renamed = text.replace(`name: pstack-${name}\n`, `name: ${name}\n`);
+    assert.notEqual(renamed, text);
+    assert.match(renamed, new RegExp(`^name: ${name}$`, "m"));
+    writeFileSync(join(dir, "SKILL.md"), renamed);
+  }
+  const { loadSkills } = await resolvePi();
+  const { diagnostics } = loadSkills({
+    cwd: tmp,
+    agentDir: join(tmp, "agent"),
+    skillPaths: [wrong, userRoot],
+    includeDefaults: false,
+  });
+  assertUserBytes(before);
+  assert.deepEqual(
+    diagnostics.filter((d) => d.type === "collision").map((d) => d.collision?.name).sort(),
+    ["tdd", "teach"],
+  );
+});
+
+test("queued expansion of the four explicit skills comes from the expected files", async () => {
+  const before = snapshotUserBytes();
+  const tmp = mkdtempSync(join(tmpdir(), "pi-four-"));
+  const userRoot = linkUserSkills(tmp);
+  const expected = {
+    tdd: userSkillFile("tdd"),
+    teach: userSkillFile("teach"),
+    "pstack-tdd": join(ADAPTED_SKILLS, "pstack-tdd/SKILL.md"),
+    "pstack-teach": join(ADAPTED_SKILLS, "pstack-teach/SKILL.md"),
+  };
+  const pi = await resolvePi();
+  const agentDir = join(tmp, "agent");
+  writeFileSync(join(tmp, "auth.json"), "{}");
+  const modelRuntime = await pi.ModelRuntime.create({
+    authPath: join(tmp, "auth.json"),
+    modelsPath: null,
+    allowModelNetwork: false,
+    refreshOnCreate: false,
+  });
+  const settingsManager = pi.SettingsManager.inMemory();
+  const resourceLoader = new pi.DefaultResourceLoader({
+    cwd: tmp,
+    agentDir,
+    settingsManager,
+    noExtensions: true,
+    noSkills: true,
+    additionalSkillPaths: [ADAPTED_SKILLS, userRoot],
+  });
+  await resourceLoader.reload();
+  const { session } = await pi.createAgentSession({
+    cwd: tmp,
+    agentDir,
+    modelRuntime,
+    settingsManager,
+    sessionManager: pi.SessionManager.inMemory(tmp),
+    resourceLoader,
+    noTools: "all",
+  });
+  try {
+    for (const [name, file] of Object.entries(expected)) {
+      const arg = `probe-${name}`;
+      session.clearQueue();
+      await session.steer(`/skill:${name} ${arg}`);
+      const queued = session.getSteeringMessages();
+      assert.equal(queued.length, 1, name);
+      const expanded = queued[0];
+      const loc = /location="([^"]+)"/.exec(expanded);
+      assert.ok(loc, name);
+      assert.equal(realpathSync(loc[1]), realpathSync(file), name);
+      const body = readFileSync(file, "utf8").replace(/^---\n[\s\S]*?\n---\n?/, "").trim();
+      assert.ok(expanded.includes(body.slice(0, 60)), name);
+      assert.ok(expanded.endsWith(arg), name);
+      assert.equal(expanded.includes(`/skill:${name}`), false, name);
+    }
+  } finally {
+    session.clearQueue();
+    session.dispose();
+  }
+  assertUserBytes(before);
+});
+
+test("tutorial links and the bug-fix reference resolve to loaded namespaced skills", async () => {
+  const tmp = mkdtempSync(join(tmpdir(), "pi-links-"));
+  const { loadSkills } = await resolvePi();
+  const { skills } = loadSkills({
+    cwd: tmp,
+    agentDir: join(tmp, "agent"),
+    skillPaths: [ADAPTED_SKILLS],
+    includeDefaults: false,
+  });
+  const byName = Object.fromEntries(skills.map((skill) => [skill.name, skill]));
+  const links = [
+    ["03-understand.md", "../../skills/pstack-teach/SKILL.md", "pstack-teach"],
+    ["05-build-and-clean.md", "../../skills/pstack-tdd/SKILL.md", "pstack-tdd"],
+  ];
+  for (const [file, href, name] of links) {
+    const text = readFileSync(join(REPO_ROOT, "docs/upstream-guide", file), "utf8");
+    assert.ok(text.includes(href), file);
+    assert.equal(text.includes(`../../skills/${name.slice("pstack-".length)}/SKILL.md`), false);
+    const suffix = href.replace(/^(\.\.\/)+/, "").slice("skills/".length);
+    assert.equal(realpathSync(byName[name].filePath), realpathSync(join(ADAPTED_SKILLS, suffix)));
+  }
+  const bugfix = readFileSync(join(ADAPTED_SKILLS, "poteto-mode/playbooks/bug-fix.md"), "utf8");
+  assert.match(bugfix, /\*\*pstack-tdd\*\*/);
+  assert.doesNotMatch(bugfix, /\*\*tdd\*\*/);
+  assert.equal(
+    realpathSync(byName["pstack-tdd"].filePath),
+    realpathSync(join(ADAPTED_SKILLS, "pstack-tdd/SKILL.md")),
+  );
+});
