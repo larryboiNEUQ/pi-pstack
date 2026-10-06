@@ -15,7 +15,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { test } from "node:test";
 
@@ -119,7 +119,7 @@ function generateTo(tmp, sourceDir = snapshot, extra = {}) {
 }
 
 const PI_GUIDE_BLOCK =
-  "> **Pi 适配说明（本仓库添加）**：本教程是上游 pstack 原文，针对 Cursor 编写。Pi 安装不同：先在本仓库运行 `npm run generate`，将 `adapted/skills/` 下的技能链接到 `~/.agents/skills/`（先检查同名冲突并备份），再用 `node scripts/install.mjs` 预检，经授权后加 `--apply` 安装三个 agent 与配置种子；不要在 Pi 中使用 Cursor 的 `/add-plugin pstack`。`/poteto-mode` 写作 `/skill:poteto-mode`，其他技能同理写作 `/skill:<名称>`，或在句中输入 `$<名称>`；模型配置使用 `/skill:setup-pstack`；有界自主续跑仍用已安装的 pi-goal `/goal` 并写明停止条件；定时 `/loop` 与 `/loop 1h` 未验证，不要映射到 `/goal`，也不要另装调度器；云端子代理、Cursor 自动化和持续模式不提供。完整差异见本仓库 `.scratch/pi-pstack-adaptation/spec.md`。\n\n";
+  "> **Pi 适配说明（本仓库添加）**：本教程是上游 pstack 原文，针对 Cursor 编写。Pi 安装不同：先在本仓库运行 `npm run generate`，将 `adapted/skills/` 下的技能链接到 `~/.agents/skills/`（先检查同名冲突并备份），再用 `node scripts/install.mjs` 预检，经授权后加 `--apply` 安装三个 agent 与配置种子；不要在 Pi 中使用 Cursor 的 `/add-plugin pstack`。`/poteto-mode` 写作 `/skill:poteto-mode`，其他技能同理写作 `/skill:<名称>`，或在句中输入 `$<名称>`；模型配置使用 `/skill:setup-pstack`；有界自主续跑仍用已安装的 pi-goal `/goal` 并写明停止条件；定时 `/loop` 与 `/loop 1h` 未验证，不要映射到 `/goal`，也不要另装调度器；云端子代理、Cursor 自动化和持续模式不提供。完整差异见 https://github.com/larryboiNEUQ/pi-pstack/issues/3 。\n\n";
 
 function upstreamPathFor(rel) {
   if (rel === "LICENSE-pstack") return join(snapshot, "pstack/LICENSE");
@@ -168,8 +168,8 @@ test("skill set is upstream pstack skills minus excluded plus team-kit skills", 
     [...EXCLUDED].sort(),
   );
   assert.deepEqual(actual, expected);
-  assert.equal(actual.length, 52);
-  for (const name of ["benchmark-checklist", "correct", "principle-explain-the-number"]) {
+  assert.equal(actual.length, 53);
+  for (const name of ["benchmark-checklist", "correct", "principle-explain-the-number", "poteto-help"]) {
     assert.ok(actual.includes(name), name);
   }
 });
@@ -905,6 +905,8 @@ test("fixture: happy path generates adapted package", () => {
 
 test("fixture: explicit base-only stack does not require upstream role tables", () => {
   const { src } = buildFixture();
+  cpSync(join(snapshot, "pstack/skills/poteto-help"), join(src, "pstack/skills/poteto-help"), { recursive: true });
+  cpSync(join(snapshot, "pstack/docs/guide"), join(src, "pstack/docs/guide"), { recursive: true });
   const tmp = mkdtempSync(join(tmpdir(), "gen-"));
   const { adaptedDir } = generateTo(tmp, src, {
     manifestPaths: [DEFAULT_MANIFEST_PATHS[0]],
@@ -1414,14 +1416,18 @@ test("fixture: declared source beneath a symlinked dir with missing leaf is refu
   );
 });
 
-test("pinned commit manifest version is 0.15.9", () => {
-  assert.equal(PINNED_COMMIT, "e43c7ee26e0038c6c1fa8380dd34ce86ff94cb2a");
+test("pinned commit manifest version is 0.15.15", () => {
+  assert.equal(PINNED_COMMIT, "df581122cde17e6e27686b5a448bde23e4ad4318");
   const raw = execFileSync(
     "git",
     ["-C", DEFAULT_REPO, "show", `${PINNED_COMMIT}:pstack/.cursor-plugin/plugin.json`],
     { encoding: "utf8" },
   );
-  assert.equal(JSON.parse(raw).version, "0.15.9");
+  assert.equal(JSON.parse(raw).version, "0.15.15");
+  assert.equal(
+    setupChange.expectedSha256,
+    "d61b47256a18155a81c8e5ef95e3cc6569ce8c18317c35c4dd9c8015cf68cb59",
+  );
   assert.equal(
     createHash("sha256").update(readFileSync(upstreamSetup)).digest("hex"),
     setupChange.expectedSha256,
@@ -1677,4 +1683,173 @@ test("tutorial commands and links resolve to namespaced skill files", () => {
     assert.doesNotMatch(text, /skills\/teach\/SKILL\.md/, file);
     assert.doesNotMatch(text, bare, file);
   }
+});
+
+test("PSTACK_UPSTREAM_REPO overrides DEFAULT_REPO and an unset value keeps the home clone", () => {
+  const repoRoot = resolve(adaptationDir, "..");
+  const code = `import { DEFAULT_REPO } from ${JSON.stringify(join(repoRoot, "scripts/generate.mjs"))}; process.stdout.write(DEFAULT_REPO);`;
+  const override = join(tmpdir(), "pstack-upstream-override");
+  const withOverride = execFileSync(process.execPath, ["--input-type=module", "-e", code], {
+    env: { ...process.env, PSTACK_UPSTREAM_REPO: override },
+    encoding: "utf8",
+  });
+  assert.equal(withOverride, override);
+  const env = { ...process.env };
+  delete env.PSTACK_UPSTREAM_REPO;
+  const without = execFileSync(process.execPath, ["--input-type=module", "-e", code], {
+    env,
+    encoding: "utf8",
+  });
+  assert.equal(without, join(homedir(), ".agents/repos/cursor-plugins"));
+});
+
+test("poteto-help is Pi-local and its packaged links resolve", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-help-"));
+  cpSync(join(adaptationDir, "..", "README.md"), join(tmp, "README.md"));
+  const guideDir = join(tmp, "docs", "upstream-guide");
+  const { adaptedDir } = generateTo(tmp, snapshot, { guideDir });
+  const helpDir = join(adaptedDir, "skills/poteto-help");
+  const skill = readFileSync(join(helpDir, "SKILL.md"), "utf8");
+  assert.match(skill, /^---\nname: poteto-help\n/);
+  assert.match(skill, /^disable-model-invocation: true$/m);
+  assert.equal(
+    skill.includes("> Pi: Before executing this skill, read `../poteto-mode/references/pi-host.md`."),
+    true,
+  );
+  assert.equal(skill.includes("~/.pi/agent/pstack/models.md"), true);
+  assert.equal(skill.includes("/skill:setup-pstack"), true);
+  assert.equal(skill.includes("/skill:poteto-mode"), true);
+  assert.equal(skill.includes("Cursor `/add-plugin` is unsupported."), true);
+  assert.equal(skill.includes("../pstack-tdd/SKILL.md"), true);
+  assert.equal(skill.includes("../pstack-teach/SKILL.md"), true);
+  assert.equal(skill.includes("../deslop/SKILL.md"), true);
+  assert.equal(skill.includes("../control-cli/SKILL.md"), true);
+  assert.equal(skill.includes("../control-ui/SKILL.md"), true);
+  assert.equal(skill.includes("Read writing-for-agents when authoring a skill."), true);
+  assert.equal(
+    skill.includes("`make-bot-ui` depends on Cursor webhooks and is not in this package."),
+    true,
+  );
+  assert.equal(skill.includes("Timed `/loop` is unsupported"), true);
+  assert.equal(skill.includes("../../../docs/upstream-guide/01-setup.md"), true);
+  assert.equal(skill.includes("](../../../README.md)"), true);
+  assert.equal(skill.includes("- Get set up or start a task\n- Pick a skill for a situation\n- Fix a run that went wrong\n- Make pstack my own"), true);
+  assert.equal(skill.includes("roles inherit the main conversation model"), true);
+  assert.equal(skill.includes("`/skill:principle-<name>`"), true);
+  assert.equal(skill.includes("Custom Mode"), false);
+  assert.equal(skill.includes("Option+Enter"), false);
+  assert.equal(skill.includes("pstack-models.mdc"), false);
+  assert.equal(skill.includes("github.com/cursor/plugins"), false);
+  assert.equal(skill.includes("as cloud agents"), false);
+  assert.equal(skill.includes("../teach/SKILL.md"), false);
+  assert.equal(skill.includes("../tdd/SKILL.md"), false);
+  assert.equal(skill.includes("../make-bot-ui/SKILL.md"), false);
+  assert.equal(skill.includes("Only `/setup-pstack` loads"), false);
+
+  const prompting = readFileSync(join(helpDir, "references/prompting.md"), "utf8");
+  assert.equal(
+    prompting.includes("> Pi: Before using these prompt notes, read `../../poteto-mode/references/pi-host.md`."),
+    true,
+  );
+  assert.equal(prompting.includes("Timed `/loop` is unsupported."), true);
+  assert.equal(prompting.includes("/skill:pstack-teach"), true);
+  assert.equal(prompting.includes("/loop until"), false);
+  assert.equal(prompting.includes("the mode treats the message"), false);
+
+  const recipes = readFileSync(join(helpDir, "references/recipes.md"), "utf8");
+  assert.equal(
+    recipes.includes("> Pi: Before copying a prompt, read `../../poteto-mode/references/pi-host.md`."),
+    true,
+  );
+  assert.equal(recipes.includes("/skill:pstack-tdd"), true);
+  assert.equal(recipes.includes("/skill:pstack-teach"), true);
+  assert.equal(recipes.includes("Timed /loop is unsupported."), true);
+  assert.equal(recipes.includes("/loop until done"), false);
+  assert.equal(recipes.includes(" /tdd "), false);
+  assert.equal(recipes.includes(" /teach "), false);
+
+  const assertRelativeLinks = (file) => {
+    const text = readFileSync(file, "utf8");
+    const dir = dirname(file);
+    for (const match of text.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
+      const href = match[1];
+      if (!href.startsWith(".")) continue;
+      assert.equal(existsSync(resolve(dir, href)), true, `${href} from ${relative(tmp, file)}`);
+    }
+  };
+  assertRelativeLinks(join(helpDir, "SKILL.md"));
+  assertRelativeLinks(join(helpDir, "references/prompting.md"));
+  assertRelativeLinks(join(helpDir, "references/recipes.md"));
+
+  const guide = readFileSync(join(guideDir, "README.md"), "utf8");
+  assert.equal(guide.includes("../../adapted/skills/poteto-help/SKILL.md"), true);
+  assert.equal(
+    guide.includes("/skill:poteto-help which skill should i use to review this branch?"),
+    true,
+  );
+  assert.equal(
+    realpathSync(resolve(guideDir, "../../adapted/skills/poteto-help/SKILL.md")),
+    realpathSync(join(helpDir, "SKILL.md")),
+  );
+  const makeBot = readFileSync(join(guideDir, "09-make-it-yours.md"), "utf8");
+  assert.equal(
+    makeBot.includes("`make-bot-ui` depends on Cursor webhooks and is not in this package."),
+    true,
+  );
+  assert.equal(makeBot.includes("skills/make-bot-ui/SKILL.md"), false);
+});
+
+test("shipped defaults follow the two-family panel cut and setup states Pi budgets", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-defaults-"));
+  const { adaptedDir } = generateTo(tmp);
+  const defaults = readFileSync(
+    join(adaptedDir, "skills/poteto-mode/references/default-models.md"),
+    "utf8",
+  );
+  const seed = readFileSync(join(adaptedDir, "config/models.md"), "utf8");
+  assert.equal(seed, defaults);
+  assert.equal(defaults.includes("how explorer: openai/gpt-6.1-sol:xhigh"), true);
+  assert.equal(defaults.includes("why investigators: openai/gpt-6.1-sol:xhigh"), true);
+  assert.equal(defaults.includes("reflect tooling: xai/grok-4.7:xhigh"), true);
+  assert.equal(
+    defaults.includes("interrogate reviewers: devin/claude-opus-5.5:xhigh, xai/grok-4.7:xhigh"),
+    true,
+  );
+  assert.equal(
+    defaults.includes("arena runners: devin/claude-opus-5.5:xhigh, xai/grok-4.7:xhigh"),
+    true,
+  );
+  assert.equal(
+    defaults.includes("architect runners: devin/claude-opus-5.5:xhigh, xai/grok-4.7:xhigh"),
+    true,
+  );
+  assert.equal(
+    defaults.includes("arena cross-judge pool: devin/claude-opus-5.5:xhigh, xai/grok-4.7:xhigh"),
+    true,
+  );
+  assert.equal(
+    defaults.includes("show-me-your-work auditor: xai/grok-4.7:xhigh, openai/gpt-6.1-sol:xhigh, devin/claude-opus-5.5:xhigh"),
+    true,
+  );
+  assert.equal(
+    defaults.includes("interrogate reviewers: devin/claude-opus-5.5:xhigh, openai/gpt-6.1-sol:xhigh"),
+    false,
+  );
+  const setup = readFileSync(join(adaptedDir, "skills/setup-pstack/SKILL.md"), "utf8");
+  assert.equal(setup.includes("The shipped default budget is `large`. That is Pi thinking `xhigh`."), true);
+  assert.equal(setup.includes("`unlimited`. Upstream calls this max reasoning."), true);
+  assert.equal(setup.includes("`large`. Pi thinking `xhigh`."), true);
+  assert.equal(setup.includes("`medium`. Pi thinking `high`."), true);
+  assert.equal(setup.includes("`small`. Pi thinking `medium`."), true);
+  assert.equal(setup.includes("This host maps unsupported `max` to `xhigh`"), true);
+  assert.equal(setup.includes("Leave `auto` and `inherit-parent` unchanged."), true);
+  assert.equal(setup.includes("Preserve a custom family or a custom panel list the user already chose."), true);
+  assert.equal(setup.includes("Two distinct model families are enough for a panel."), true);
+  assert.equal(
+    setup.includes("Do not write `~/.pi/agent/pstack/models.md` or `subscriptions.md` before that acceptance."),
+    true,
+  );
+  assert.equal(setup.includes("three distinct"), false);
+  assert.equal(setup.includes("pstack-models.mdc"), false);
+  assert.equal(setup.includes(".cursor/rules"), false);
 });
