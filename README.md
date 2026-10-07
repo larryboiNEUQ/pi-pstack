@@ -24,6 +24,8 @@
 
 发布的默认表位于 `adapted/skills/poteto-mode/references/default-models.md`，角色目录位于同目录的 `roles.json`；`adapted/config/` 提供安装种子。已有用户表 `~/.pi/agent/pstack/models.md` 和订阅档案 `subscriptions.md` 不由重新生成重置。
 
+上游官方默认是 Claude/Grok 两家族全 `xhigh`；本仓库发布的默认表是用户批准的 Sol/SWE/Opus/Grok 项目分配，thinking 按角色混合（medium/high/xhigh），见 spec #18 附录与 ticket #21。两者不要混为一谈。
+
 模型或订阅变化时显式调用 `/skill:setup-pstack`：先发现当前可用模型并提出整表建议，用户确认后才刷新可用列表、验证、备份和写入。Issue 06 的“Grok 到期”结果只用于隔离 fixture 验收，不是对真实默认表的重新分配；fixture 已守卫恢复。后续 workflow 的验收仍按各 Issue 单独推进。
 
 ## 从这里开始

@@ -1114,8 +1114,8 @@ test("role guard rejects a defaults row missing the name/model separator", () =>
     join(adaptationDir, "files/skills/poteto-mode/references/default-models.md"),
     defaultsPath,
   );
-  const row = "feature, refactoring: xai/grok-4.7:xhigh";
-  const bad = "feature, refactoring:xai/grok-4.7:xhigh";
+  const row = "feature, refactoring: openai/gpt-6.1-sol:high";
+  const bad = "feature, refactoring:openai/gpt-6.1-sol:high";
   const text = readFileSync(defaultsPath, "utf8");
   assert.ok(text.includes(row), "expected defaults row in the frozen source");
   writeFileSync(defaultsPath, text.replace(row, bad));
@@ -1799,7 +1799,7 @@ test("poteto-help is Pi-local and its packaged links resolve", () => {
   assert.equal(makeBot.includes("skills/make-bot-ui/SKILL.md"), false);
 });
 
-test("shipped defaults follow the two-family panel cut and setup states Pi budgets", () => {
+test("shipped defaults are the approved mixed project table and setup states named budget semantics", () => {
   const tmp = mkdtempSync(join(tmpdir(), "gen-defaults-"));
   const { adaptedDir } = generateTo(tmp);
   const defaults = readFileSync(
@@ -1808,35 +1808,43 @@ test("shipped defaults follow the two-family panel cut and setup states Pi budge
   );
   const seed = readFileSync(join(adaptedDir, "config/models.md"), "utf8");
   assert.equal(seed, defaults);
-  assert.equal(defaults.includes("how explorer: openai/gpt-6.1-sol:xhigh"), true);
-  assert.equal(defaults.includes("why investigators: openai/gpt-6.1-sol:xhigh"), true);
-  assert.equal(defaults.includes("reflect tooling: xai/grok-4.7:xhigh"), true);
-  assert.equal(
-    defaults.includes("interrogate reviewers: devin/claude-opus-5.5:xhigh, xai/grok-4.7:xhigh"),
-    true,
-  );
-  assert.equal(
-    defaults.includes("arena runners: devin/claude-opus-5.5:xhigh, xai/grok-4.7:xhigh"),
-    true,
-  );
-  assert.equal(
-    defaults.includes("architect runners: devin/claude-opus-5.5:xhigh, xai/grok-4.7:xhigh"),
-    true,
-  );
-  assert.equal(
-    defaults.includes("arena cross-judge pool: devin/claude-opus-5.5:xhigh, xai/grok-4.7:xhigh"),
-    true,
-  );
-  assert.equal(
-    defaults.includes("show-me-your-work auditor: xai/grok-4.7:xhigh, openai/gpt-6.1-sol:xhigh, devin/claude-opus-5.5:xhigh"),
-    true,
-  );
-  assert.equal(
-    defaults.includes("interrogate reviewers: devin/claude-opus-5.5:xhigh, openai/gpt-6.1-sol:xhigh"),
-    false,
-  );
+  const rows = defaults
+    .split(/\r?\n/)
+    .filter((line) => line.trim() && !line.startsWith("#"));
+  assert.deepEqual(rows, [
+    "feature, refactoring: openai/gpt-6.1-sol:high",
+    "bug-fix: openai/gpt-6.1-sol:high",
+    "perf-issue: openai/gpt-6.1-sol:high",
+    "hillclimb: openai/gpt-6.1-sol:high",
+    "swarm workers: devin/swe-2:medium",
+    "how explorer: openai/gpt-6.1-sol:medium",
+    "how explainer: openai/gpt-6.1-sol:high",
+    "why investigators: openai/gpt-6.1-sol:high",
+    "why synthesizer: openai/gpt-6.1-sol:high",
+    "judgment and prose: openai/gpt-6.1-sol:high",
+    "hardest tasks: openai/gpt-6.1-sol:xhigh",
+    "reflect tooling: xai/grok-4.7:high",
+    "reflect judgment, divergent, synthesizer: openai/gpt-6.1-sol:high",
+    "interrogate reviewers: openai/gpt-6.1-sol:high, devin/claude-opus-5.5:high",
+    "arena runners: openai/gpt-6.1-sol:high, devin/swe-2:medium",
+    "architect runners: openai/gpt-6.1-sol:high, devin/claude-opus-5.5:high",
+    "arena cross-judge pool: xai/grok-4.7:high, devin/claude-opus-5.5:high, openai/gpt-6.1-sol:high",
+    "show-me-your-work auditor: xai/grok-4.7:high, devin/claude-opus-5.5:high, openai/gpt-6.1-sol:high",
+    "recall slices: devin/swe-2:medium",
+    "automate-me slices: devin/swe-2:medium",
+    "verification source wave: devin/swe-2:medium",
+    "comment sicko: devin/swe-2:medium",
+  ]);
   const setup = readFileSync(join(adaptedDir, "skills/setup-pstack/SKILL.md"), "utf8");
-  assert.equal(setup.includes("The shipped default budget is `large`. That is Pi thinking `xhigh`."), true);
+  assert.equal(setup.includes("distinct from the shipped project defaults"), true);
+  assert.equal(
+    setup.includes("Only apply a uniform named budget when the user explicitly asks for one"),
+    true,
+  );
+  assert.equal(
+    setup.includes("do not ask for a budget and do not normalize thinking values"),
+    true,
+  );
   assert.equal(setup.includes("`unlimited`. Upstream calls this max reasoning."), true);
   assert.equal(setup.includes("`large`. Pi thinking `xhigh`."), true);
   assert.equal(setup.includes("`medium`. Pi thinking `high`."), true);

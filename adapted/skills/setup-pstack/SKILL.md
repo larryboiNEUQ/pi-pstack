@@ -22,11 +22,13 @@ Run `pi --list-models`. Keep the exact provider/model identities from its curren
 
 If the command fails, stop before writing and report the error. A cached list or a fuzzy model match is not proof of current availability.
 
-## 3. Propose A Budget And The Whole Table
+## 3. Propose The Whole Table
 
-The shipped default budget is `large`. That is Pi thinking `xhigh`.
+The upstream default budget is `large`, Pi thinking `xhigh`. That is the upstream cut, distinct from the shipped project defaults, which are the user-approved mixed allocation in `default-models.md` with per-role thinking values.
 
-Ask for one budget before you build the proposal. Use `ask_user_question` when it is available. Otherwise ask in plain text and wait. Offer these four labels, and name the current budget when the table records one. With no table, say that `large` matches the shipped defaults.
+Preserve each role's recorded thinking. Only apply a uniform named budget when the user explicitly asks for one. Without an explicit uniform-budget request, do not ask for a budget and do not normalize thinking values; propose the existing table as-is, or the shipped defaults when no table exists.
+
+When the user explicitly asks for a uniform named budget, ask for one before you build the proposal. Use `ask_user_question` when it is available. Otherwise ask in plain text and wait. Offer these four labels, and name the current budget when the table records one.
 
 - `unlimited`. Upstream calls this max reasoning. This host maps unsupported `max` to `xhigh` through the host rule, and the proposal must report that mapping.
 - `large`. Pi thinking `xhigh`.

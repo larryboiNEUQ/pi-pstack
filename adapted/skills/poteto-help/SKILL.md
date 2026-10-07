@@ -36,7 +36,7 @@ When the model rule is missing and it matters, ask whether the user wants to pic
 ## Get set up
 
 1. Cursor `/add-plugin` is unsupported. Generate this package in the pi-pstack repo, then link `adapted/skills/` into `~/.agents/skills/` only after the user approves that write in the current task.
-2. Run [`/skill:setup-pstack`](../setup-pstack/SKILL.md). It asks for a reasoning budget, proposes a model for each role, and writes `~/.pi/agent/pstack/models.md` only after explicit approval. The user must type that command. It does not apply itself to later chats.
+2. Run [`/skill:setup-pstack`](../setup-pstack/SKILL.md). It proposes a model for each role, preserves mixed thinking unless the user requests a uniform budget, and writes `~/.pi/agent/pstack/models.md` only after explicit approval. The user must type that command. It does not apply itself to later chats.
 3. Start a real task with `/skill:poteto-mode`, a goal, and a check that can pass or fail.
 
 Installing changes nothing until the user types `/skill:<name>`. The [README](../../../README.md) and [guide page 1](../../../docs/upstream-guide/01-setup.md) have the Pi differences. Offer to word their first prompt with them, per [`references/prompting.md`](references/prompting.md).

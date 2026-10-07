@@ -245,7 +245,7 @@
       "op": "replace",
       "target": "skills/poteto-help/SKILL.md",
       "anchor": "2. Run [`/setup-pstack`](../setup-pstack/SKILL.md). It asks for a reasoning budget, maps a model to each role, and writes a rule. The rule applies to new chats.",
-      "text": "2. Run [`/skill:setup-pstack`](../setup-pstack/SKILL.md). It asks for a reasoning budget, proposes a model for each role, and writes `~/.pi/agent/pstack/models.md` only after explicit approval. The user must type that command. It does not apply itself to later chats.",
+      "text": "2. Run [`/skill:setup-pstack`](../setup-pstack/SKILL.md). It proposes a model for each role, preserves mixed thinking unless the user requests a uniform budget, and writes `~/.pi/agent/pstack/models.md` only after explicit approval. The user must type that command. It does not apply itself to later chats.",
       "reason": "detect configuration from the Pi model table and setup-pstack."
     },
     {
