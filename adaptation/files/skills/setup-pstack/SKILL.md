@@ -43,13 +43,13 @@ Supported thinking values in a written table are `off`, `minimal`, `low`, `mediu
 
 Two distinct model families are enough for a panel. Do not require a third family. Report reduced diversity when the available families are fewer than the seats you propose, and wait for the user to accept that reduction or to edit the rows. Do not fabricate a model.
 
-Preserve the user's approved upstream-family mappings unless they request reallocation. Subscription quotas inform a proposal. They do not authorize silently replacing all Claude seats with GPT or SWE.
+Preserve the user's approved role choices unless they request reallocation. Subscription quotas inform a proposal. They do not authorize silently replacing all Claude seats with GPT or SWE.
 
 If the user requests quota-based reallocation, prefer unlimited models for mechanical work and primary quota for judgment and prose. Keep each adversarial panel's families distinct. Use scarce quota for at most one seat per proposed panel. Choose judges from a different family than the working parent when possible.
 
 Group models by model family, not by provider. Devin Claude and Devin SWE are different families. `auto` and `inherit-parent` count as panel seats but may reduce diversity when resolved to the current parent.
 
-For every role, show role, purpose, current assignment, proposed assignment, thinking, and reason. Show unavailable assignments, newly available same-family candidates, removed rows, the chosen budget, any `max` to `xhigh` mapping, and any reduced family diversity.
+For every role, show role, purpose, current assignment, proposed assignment, thinking, and reason. Show unavailable assignments, newly available same-family candidates, removed rows, any `max` to `xhigh` mapping, and any reduced family diversity. Report the chosen uniform budget only when requested. Otherwise report the preserved per-role thinking.
 
 ## 4. Ask For Approval
 
@@ -65,7 +65,7 @@ Use `provider/model:thinking` values and preserve full comma-containing role lab
 
 Create a unique backup of every existing file to be changed. Preserve its bytes and report the backup paths. Stage the accepted new files beside their destinations, reread and validate them, then replace the destinations. On failure, retain the backup and report partial state rather than claiming success.
 
-Write only the accepted model table and accepted subscription changes. Report the effective table, backup paths, inherited roles, the accepted budget, and any reported `max` to `xhigh` mapping. Re-running this skill should propose against the current table rather than reset it.
+Write only the accepted model table and accepted subscription changes. Report the effective table, backup paths, inherited roles, and any reported `max` to `xhigh` mapping. Report an accepted uniform budget only when requested; otherwise report the per-role thinking. Re-running this skill should propose against the current table rather than reset it.
 
 ## 6. Optional Verification Skill
 

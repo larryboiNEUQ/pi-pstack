@@ -1799,6 +1799,23 @@ test("poteto-help is Pi-local and its packaged links resolve", () => {
   assert.equal(makeBot.includes("skills/make-bot-ui/SKILL.md"), false);
 });
 
+test("every copied guide relative link resolves to the generated package", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-guide-links-"));
+  cpSync(join(adaptationDir, "..", "README.md"), join(tmp, "README.md"));
+  const guideDir = join(tmp, "docs", "upstream-guide");
+  generateTo(tmp, snapshot, { guideDir });
+  for (const name of readdirSync(guideDir).filter((name) => name.endsWith(".md"))) {
+    const file = join(guideDir, name);
+    const text = readFileSync(file, "utf8");
+    for (const match of text.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
+      const href = match[1].split("#")[0];
+      if (!href.startsWith(".")) continue;
+      assert.doesNotMatch(href, /^\.\.\/\.\.\/(skills|agents)\//, `${name}: ${href}`);
+      assert.equal(existsSync(resolve(dirname(file), href)), true, `${name}: ${href}`);
+    }
+  }
+});
+
 test("shipped defaults are the approved mixed project table and setup states named budget semantics", () => {
   const tmp = mkdtempSync(join(tmpdir(), "gen-defaults-"));
   const { adaptedDir } = generateTo(tmp);

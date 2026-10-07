@@ -48,9 +48,9 @@ flowchart LR
 
 ## 生成与验证状态
 
-- `npm run generate` 已成功，产出 53 个技能，四份清单合计 201 条改动。改动条数以 `adaptation/changes.json`、`host-changes.json`、`path-changes.json`、`setup-changes.json` 为准。
+- `npm run generate` 已成功，产出 53 个技能。改动条数以 `adaptation/changes.json`、`host-changes.json`、`path-changes.json`、`setup-changes.json` 为准。
 - 升级前全量基线 `npm test` 为 104/104 通过。
-- 升级后的完整 `npm test` 为 108/108 通过。覆盖完整 22 行项目分配、配置种子一致性、生成器、安装器 fixture、真实 Pi SDK 的技能加载和帮助命令展开。
+- 升级后的完整 `npm test` 为 109/109 通过。覆盖完整 22 行项目分配、配置种子一致性、全部教程的本地链接、生成器、安装器 fixture、真实 Pi SDK 的技能加载和帮助命令展开。
 - 从固定提交独立生成副本，逐项比较 SHA-256、文件模式和链接目标。`adapted/` 的 141 个文件与教程的 19 个文件均一致。
 - `npm run test:installed` 未运行。
 - CI 未配置，CI 证据不可用。
