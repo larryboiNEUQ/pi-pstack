@@ -57,8 +57,8 @@ Read `~/.pi/agent/pstack/models.md` before the first role-based spawn in a task.
 - Agent files deliberately contain no model or thinking. Leave existing Explore, worker, reviewer, general-purpose, and Plan definitions unchanged.
 - Validate each explicit provider/model against the current authenticated model list from `pi --list-models`. Exact identity matters. Do not rely on fuzzy matching or cross-provider substitution.
 - Inspect the returned effective model and thinking. A silent provider/model substitution is not a successful configured-model run.
-- Initial mappings preserve the upstream model families. Approved exceptions are GPT for how explorer and why investigators. Cursor max maps to xhigh in this adaptation; Cursor fast has no separate Pi model identity. This is a mapping choice, not a statement that Pi never supports max.
-- Role defaults are published in `default-models.md` beside this reference. Installation seeds the user table from it. Deleting a user role intentionally enables inheritance rather than reinstating an upstream Cursor slug.
+- `default-models.md` beside this reference is the single source of truth for role defaults and installation seeds. The shipped table is a user-approved project allocation with mixed per-role thinking, not the upstream two-family xhigh cut. Deleting a user role intentionally enables inheritance rather than reinstating an upstream Cursor slug. Cursor max maps to xhigh in this adaptation. Cursor fast has no separate Pi model identity. This is a mapping choice, not a statement that Pi never supports max.
+- When `swarm workers` is configured to SWE, use it for explicit, small, verifiable blocks. For complex or ambiguous blocks, explicitly select Sol with `high` thinking or the `hardest tasks` role. This rule concerns swarm task assignment, not the fixed seats in other panels. There is no automatic difficulty classifier; the caller chooses the assignment.
 
 For reviewers and race seats, start one agent per list entry. Track each seat's requested and effective model. Identify model families by model ID (Claude, GPT, Grok, SWE), not by provider: Devin can host several families.
 

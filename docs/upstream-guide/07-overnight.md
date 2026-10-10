@@ -4,6 +4,17 @@ This is the payoff for everything before it. An agent you can trust to verify it
 
 ![She waves goodnight from the door while robots keep the factory running, one updating a DECISION LOG wall board under a BUILD LOOP ACTIVE sign.](./images/overnight.jpg)
 
+## Earn the trust before the loop
+
+A loop you don't trust just produces unchecked work faster, and the mess compounds with every iteration. Before you leave one running, check that it has earned it:
+
+- You've done the task once by hand, or watched an agent do it, so you know what good looks like.
+- The agent has the tools and signals you'd use yourself: the verification skill, the profiler, the logs.
+- Every stage proves its work and can stop the line when the work misses the bar.
+- You've read a few transcripts and turned the repeated failures into tools, skills, or checks.
+
+Make the loop autonomous only after all four hold. Until then, run it while you watch.
+
 ## The overnight contract
 
 A good handoff has the goal, the finish condition, permissions, and an escape hatch. It doesn't need to be long:
@@ -21,10 +32,12 @@ Walk through what each line buys you:
 - "done means..." turns the goal into checks every iteration can run.
 - "fresh worktree off `<base>`" keeps the run from colliding with anything else you have open.
 - "don't ask me before committing" pre-answers the permission the agent would otherwise block on.
-- `/loop` is Cursor's built-in wake mechanism, not a pstack skill. The [Autonomous run playbook](../../skills/poteto-mode/playbooks/autonomous-run.md) uses it to re-check the finish condition on events or a heartbeat.
+- `/loop` is Cursor's built-in wake mechanism, not a pstack skill. The [Autonomous run playbook](../../adapted/skills/poteto-mode/playbooks/autonomous-run.md) uses it to re-check the finish condition on events or a heartbeat.
 - The escape hatch lets it stop at a genuine dead end and write up why, which beats eight hours of creative goal reinterpretation.
 
-Because you'll review this work after stepping away, `/poteto-mode` routes it through [`/figure-it-out`](../../skills/figure-it-out/SKILL.md), which designs the run's phases before any code and wires in the decision log.
+Because you'll review this work after stepping away, `/poteto-mode` routes it through [`/figure-it-out`](../../adapted/skills/figure-it-out/SKILL.md), which designs the run's phases before any code and wires in the decision log.
+
+To stop a run on purpose, tell the agent to pause, or that you're about to go offline or leave the session. The [Pause safely playbook](../../adapted/skills/poteto-mode/playbooks/pause-safely.md) finishes or backs out of the current step, commits a work-in-progress checkpoint, and writes a resume note. A fresh chat picks the work up from that note through the Session pickup playbook. Saying "keep going" never triggers a pause.
 
 ## What the loop does all night
 
@@ -44,7 +57,7 @@ One change, one check, one log row, every iteration. Changes that didn't help ge
 
 ## The morning audit
 
-[`/show-me-your-work`](../../skills/show-me-your-work/SKILL.md) is what makes the run reviewable. Each row records the time, phase, decision, reason, an evidence pointer, and the result, in a TSV at `decisions.tsv` (or `.audit/<task-slug>.tsv` when several runs share a directory). It stays local by default. Commit it when the work is ambitious enough that a reviewer needs the trail to trust the result.
+[`/show-me-your-work`](../../adapted/skills/show-me-your-work/SKILL.md) is what makes the run reviewable. Each row records the time, phase, decision, reason, an evidence pointer, and the result, in a TSV at `decisions.tsv` (or `.audit/<task-slug>.tsv` when several runs share a directory). It stays local by default. Commit it when the work is ambitious enough that a reviewer needs the trail to trust the result.
 
 When you're back, ask for the run in review form:
 
@@ -58,23 +71,49 @@ Before the skill hands back its summary, it spawns a reviewer on a different mod
 
 The contract above drives one task to one finish condition. Some nights hold more, a queue of independent changes or a whole program. Three playbooks scale the same trust up.
 
-[Autopilot-full](../../skills/poteto-mode/playbooks/autopilot-full.md) runs a queue of independent PRs to merged. Each PR gets one owner agent that carries it from build through merge, and no owner merges on its own verdict. A swarm of fresh verifiers starts a round at the owner's code-ready head and again at every later push that changes the patch. Only a clean verdict on the patch that merges authorizes the merge:
+[Autopilot-full](../../adapted/skills/poteto-mode/playbooks/autopilot-full.md) runs a queue of independent PRs to merged. Each PR gets one owner agent that carries it from build through merge, and no owner merges on its own verdict. A swarm of fresh verifiers starts a round at the owner's code-ready head and again at every later push that changes the patch. Only a clean verdict on the patch that merges authorizes the merge:
 
 ```text
 /poteto-mode full autopilot on this queue. each item is independent. i want them merged by morning.
 ```
 
-[Autopilot-stack](../../skills/poteto-mode/playbooks/autopilot-stack.md) runs the same owner loop but ships nothing. You wake up to one linear base-branch stack with a verifier's verdict on every link, and you review and land it yourself. Pick it over Autopilot-full when the changes are coupled, or when you want your own eyes on the work before anything merges:
+[Autopilot-stack](../../adapted/skills/poteto-mode/playbooks/autopilot-stack.md) runs the same owner loop but ships nothing. You wake up to one linear base-branch stack with a verifier's verdict on every link, and you review and land it yourself. Pick it over Autopilot-full when the changes are coupled, or when you want your own eyes on the work before anything merges:
 
 ```text
 /poteto-mode autopilot these five changes but stack them, don't ship. i'll land the stack in the morning.
 ```
 
-[Orchestrate](../../skills/poteto-mode/playbooks/orchestrate.md) is for a program that outlives any single agent: multi-day, many stacked PRs, fleets of subagents under one standing coordinator chat. The coordinator authors briefs, collects what its subagents finish, keeps the lowest unmerged PR green, and never writes code itself. It's deliberately heavy machinery. If one agent could finish the work in a session, the playbook itself routes you back to the overnight contract above:
+[Orchestrate](../../adapted/skills/poteto-mode/playbooks/orchestrate.md) is for a program that outlives any single agent: multi-day, many stacked PRs, fleets of subagents under one standing coordinator chat. The coordinator authors briefs, collects what its subagents finish, keeps the lowest unmerged PR green, and never writes code itself. It's deliberately heavy machinery. If one agent could finish the work in a session, the playbook itself routes you back to the overnight contract above:
 
 ```text
 /poteto-mode orchestrate the store migration. own it until every package is converted and merged. i'll check in twice a day.
 ```
+
+## Run many projects in parallel
+
+Pi has no Cursor Project and no cloud runtime that continues after the laptop closes. The Orchestrate playbook still expects one coordinator on the main conversation. Start prompts to that coordinator with `/skill:poteto-mode`. Subagents run locally. Use a worktree when they would otherwise share one checkout.
+
+A few habits help:
+
+- Give each body of work its own branch and worktree, such as a feature, a migration, a perf push, or a tech-debt cleanup. Several can run side by side only when each has its own worktree.
+- Keep related notes in the repo, finished decisions included. They become context for the next agent.
+- Give each PR a verification swarm before it merges, and let Autopilot-stack or Autopilot-full carry the queue.
+- Ask the coordinator for a plan backed by data, and have it answer open questions with prototypes before it asks you.
+
+One prompt can carry a whole effort, from research through execution:
+
+```text
+/skill:poteto-mode refactor this repo so its architecture is more agent friendly. use /skill:correct and /skill:architect on past commits and review comments to find the mistakes agents make most here. use /skill:recall for context from past chats. answer open questions with prototypes instead of asking me. come back with a plan backed by real data. once i approve it, run it with autopilot-stack or autopilot-full, and ask me which.
+```
+
+## Do not start loops from a scheduler
+
+Every loop above still waits for you to start it. Pi does not provide a scheduler, a webhook automation, or Benny. Do not point an agent at `automations/benny`. Timed `/loop` is unsupported. An existing `/goal` can continue only with an explicit stop condition, and that is not a timer. Two rules still keep a handoff trustworthy:
+
+- Every stage can stop the line. Triage can decide the report is expected behavior, repro can fail to reproduce it, and the fixer can judge the change too risky. Each of those outcomes is useful, because it keeps bad work from reaching the next stage, where it costs more to undo.
+- Every stage hands over evidence. Repro attaches screenshots and video of the broken state, and the fix attaches before-and-after proof. A human can then check that the agent fixed the right thing before reading a line of code.
+
+This package does not ship the Benny automation pack. The broken upstream links to `automations/benny` are not available here.
 
 **Pitfall:** a duration is not a finish condition. "work on this for 4 hours" gives the agent nothing to check, and you'll wake up to four hours of motion instead of a result. Give `/loop` a predicate that can pass or fail.
 

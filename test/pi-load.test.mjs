@@ -440,3 +440,38 @@ test("tutorial links and the bug-fix reference resolve to loaded namespaced skil
     realpathSync(join(ADAPTED_SKILLS, "pstack-tdd/SKILL.md")),
   );
 });
+
+test("/skill:poteto-help expands the Pi help skill and its references resolve", async () => {
+  const arg = "pi-pstack-help-probe";
+  const { expanded, skill } = await expandQueuedSkill("poteto-help", arg);
+  assert.match(expanded, /^<skill name="poteto-help" location="[^"]+">/);
+  assert.equal(expanded.includes(`References are relative to ${skill.baseDir}.`), true);
+  assert.equal(expanded.includes("../poteto-mode/references/pi-host.md"), true);
+  assert.equal(expanded.includes("~/.pi/agent/pstack/models.md"), true);
+  assert.equal(expanded.includes("Cursor `/add-plugin` is unsupported."), true);
+  assert.equal(expanded.includes("../pstack-teach/SKILL.md"), true);
+  assert.equal(expanded.includes("../pstack-tdd/SKILL.md"), true);
+  assert.equal(expanded.includes("Read writing-for-agents when authoring a skill."), true);
+  assert.equal(expanded.includes("Option+Enter"), false);
+  assert.equal(expanded.includes("Custom Mode"), false);
+  assert.equal(expanded.endsWith(arg), true);
+  assert.equal(/(?<![a-zA-Z])\/poteto-help\b/.test(expanded), false);
+  const prompting = join(skill.baseDir, "references/prompting.md");
+  const recipes = join(skill.baseDir, "references/recipes.md");
+  assert.equal(existsSync(prompting), true);
+  assert.equal(existsSync(recipes), true);
+  assert.equal(readFileSync(prompting, "utf8").includes("Timed `/loop` is unsupported."), true);
+  assert.equal(readFileSync(recipes, "utf8").includes("/skill:pstack-tdd"), true);
+  assert.equal(
+    realpathSync(resolve(skill.baseDir, "../pstack-teach/SKILL.md")),
+    realpathSync(join(ADAPTED_SKILLS, "pstack-teach/SKILL.md")),
+  );
+  assert.equal(
+    realpathSync(resolve(skill.baseDir, "../../../docs/upstream-guide/01-setup.md")),
+    realpathSync(join(REPO_ROOT, "docs/upstream-guide/01-setup.md")),
+  );
+  assert.equal(
+    realpathSync(resolve(skill.baseDir, "../../../README.md")),
+    realpathSync(join(REPO_ROOT, "README.md")),
+  );
+});
