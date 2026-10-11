@@ -23,7 +23,7 @@
 - `git diff --check` 通过。
 - CI 未配置，证据不可用。
 - 未测试 ketchup 在真实聊天中的模型行为。技能加载和文本检查不等于行为评测。
-- 未合并或本机安装，未改全局设置、权限规则或本机模型配置。
+- 此处保留合并前检查结果。后续合并和安装结果见下节。
 
 ## 复跑
 
@@ -32,3 +32,15 @@ export PSTACK_UPSTREAM_REPO=/absolute/path/to/cursor-plugins
 npm run generate
 npm test
 ```
+
+## 合并后交付记录
+
+- 用户随后明确授权审查、合并和本机安装。
+- [PR #25](https://github.com/larryboiNEUQ/pi-pstack/pull/25) 已合并，提交为 `48c945403f5d536c3935820fa984bd9bc9a8ff45`。合并文件树与审查提交一致。
+- 安装前备份旧适配包和当时的模型表、订阅档案。保留现有技能链接，新增 ketchup 链接指向稳定主工作区。
+- 安装后完整测试 111/111 通过，真实本机技能加载检查 1/1 通过。重复安装器 dry-run 没有冲突。
+- 模型表与订阅档案同本次安装备份逐字节一致。自有 tdd/teach 的保留检查通过。
+- 更早安装所记录的全局设置哈希已不匹配。它不是本次安装前快照，不能用于证明本次设置变更。此次没有写入或回滚全局设置。
+- 独立 Opus 只读规范审查和 Sol 静态规格审查没有阻塞发现。运行检查由主会话执行。独立子代理运行验证因审批故障未完成，不能称为通过。
+- 权限问题仍见 [pi-auto-review #64](https://github.com/larryboiNEUQ/pi-auto-review/issues/64)。没有关闭权限保护或替换 runner。
+- 当时 CI 不可用。加载与展开测试不是 ketchup 的真实聊天行为评测。

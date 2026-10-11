@@ -23,7 +23,7 @@
 - 固定提交独立再生成比较通过。145 个适配文件和 19 个教程文件的内容、权限及链接目标一致。
 - 22 行角色配置与批准值一致。
 - `git diff --check` 通过。
-- CI 未在 `main` 启用，证据记为不可用。
+- CI 未在 `main` 启用，合并前证据记为不可用。本记录经 [#30](https://github.com/larryboiNEUQ/pi-pstack/pull/30) 携带的可移植验证流水线重新验证（本地全量测试 115/115 通过，安装器与生成器对齐检查全部通过）。
 - 未测试新技能在真实聊天中的模型行为。技能加载和文本检查不等于行为评测。
 - 本次未改 `~/.agents/skills`、`~/.pi/agent`、全局设置或权限规则。
 
@@ -33,4 +33,13 @@
 export PSTACK_UPSTREAM_REPO=/absolute/path/to/cursor-plugins
 npm run generate
 npm test
+npm run doctor
+npm run verify
 ```
+
+## 合并后交付记录
+
+- [PR #33](https://github.com/larryboiNEUQ/pi-pstack/pull/33) 已合并，提交为 `5e89a870d41a8c200ffdfceb5b95f233e8072fa5`。
+- 用户随后明确授权本机安装与清理。
+- 安装前备份模型表与订阅档案。保留现有技能链接，新增 `in-your-own-words` 与 `sharpen` 链接指向稳定主工作区。
+- 0.15.24 的本机安装与 `npm run test:installed` 安排在 PR #30 合并后执行，结果在交付汇报中更新。
