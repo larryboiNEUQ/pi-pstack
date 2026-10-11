@@ -168,7 +168,7 @@ test("skill set is upstream pstack skills minus excluded plus team-kit skills", 
     [...EXCLUDED].sort(),
   );
   assert.deepEqual(actual, expected);
-  assert.equal(actual.length, 53);
+  assert.equal(actual.length, 54);
   for (const name of ["benchmark-checklist", "correct", "principle-explain-the-number", "poteto-help"]) {
     assert.ok(actual.includes(name), name);
   }
@@ -1416,14 +1416,14 @@ test("fixture: declared source beneath a symlinked dir with missing leaf is refu
   );
 });
 
-test("pinned commit manifest version is 0.15.15", () => {
-  assert.equal(PINNED_COMMIT, "df581122cde17e6e27686b5a448bde23e4ad4318");
+test("pinned commit manifest version is 0.15.17", () => {
+  assert.equal(PINNED_COMMIT, "9d76bcab133aefcccb16121d7be874e6aa823729");
   const raw = execFileSync(
     "git",
     ["-C", DEFAULT_REPO, "show", `${PINNED_COMMIT}:pstack/.cursor-plugin/plugin.json`],
     { encoding: "utf8" },
   );
-  assert.equal(JSON.parse(raw).version, "0.15.15");
+  assert.equal(JSON.parse(raw).version, "0.15.17");
   assert.equal(
     setupChange.expectedSha256,
     "d61b47256a18155a81c8e5ef95e3cc6569ce8c18317c35c4dd9c8015cf68cb59",
@@ -1877,4 +1877,24 @@ test("shipped defaults are the approved mixed project table and setup states nam
   assert.equal(setup.includes("three distinct"), false);
   assert.equal(setup.includes("pstack-models.mdc"), false);
   assert.equal(setup.includes(".cursor/rules"), false);
+});
+
+test("ketchup preserves its explicit-only current-chat read-only contract", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "gen-ketchup-"));
+  const { adaptedDir } = generateTo(tmp);
+  const help = readFileSync(join(adaptedDir, "skills/poteto-help/SKILL.md"), "utf8");
+  assert.equal(help.includes("[`/skill:ketchup`](../ketchup/SKILL.md)"), true);
+  assert.equal(help.includes("[`/ketchup`](../ketchup/SKILL.md)"), false);
+  const skillDir = join(adaptedDir, "skills/ketchup");
+  const text = readFileSync(join(skillDir, "SKILL.md"), "utf8");
+  for (const expected of [
+    "disable-model-invocation: true",
+    "../poteto-mode/references/pi-host.md",
+    "Keep this turn read-only.",
+    "Notifications and subagent results are not their messages.",
+    "Include any still waiting on the user, even one raised before their last message.",
+    "Work you can still do yourself is not an action item.",
+  ]) assert.equal(text.includes(expected), true, expected);
+  assert.equal(existsSync(resolve(skillDir, "../poteto-mode/references/pi-host.md")), true);
+  assert.equal(existsSync(resolve(skillDir, "../bro/SKILL.md")), true);
 });

@@ -1,6 +1,14 @@
 {
   "changes": [
     {
+      "id": "help-ketchup-command",
+      "op": "replace",
+      "target": "skills/poteto-help/SKILL.md",
+      "anchor": "[`/ketchup`](../ketchup/SKILL.md)",
+      "text": "[`/skill:ketchup`](../ketchup/SKILL.md)",
+      "reason": "Use the explicit Pi command in the help routing table."
+    },
+    {
       "id": "rename-poteto-mode",
       "op": "replace",
       "target": "skills/poteto-mode/SKILL.md",
@@ -596,8 +604,8 @@
       "id": "skills-poteto-help-SKILL-md-101",
       "op": "replace",
       "target": "skills/poteto-help/SKILL.md",
-      "anchor": "- `/recall` rebuilds context across recent chats. Resuming one specific chat or branch is the Session pickup playbook.",
-      "text": "- `/skill:recall` rebuilds context across recent chats. Resuming one specific chat or branch is the Session pickup playbook.",
+      "anchor": "- `/recall` rebuilds context across recent chats. `/ketchup` covers only this chat since the user's last message. Resuming one specific chat or branch is the Session pickup playbook.",
+      "text": "- `/skill:recall` rebuilds context across recent chats. `/skill:ketchup` covers only this chat since the user's last message. Resuming one specific chat or branch is the Session pickup playbook.",
       "reason": "use explicit /skill invocation in copied help prose."
     },
     {
