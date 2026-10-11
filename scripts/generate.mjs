@@ -22,7 +22,7 @@ import { basename, dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateRoleCatalog } from "./role-guard.mjs";
 
-export const PINNED_COMMIT = "df581122cde17e6e27686b5a448bde23e4ad4318";
+export const PINNED_COMMIT = "9d76bcab133aefcccb16121d7be874e6aa823729";
 export const DEFAULT_REPO = process.env.PSTACK_UPSTREAM_REPO ?? join(
   process.env.HOME ?? "~",
   ".agents/repos/cursor-plugins",

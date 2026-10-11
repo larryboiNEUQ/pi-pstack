@@ -475,3 +475,14 @@ test("/skill:poteto-help expands the Pi help skill and its references resolve", 
     realpathSync(join(REPO_ROOT, "README.md")),
   );
 });
+
+test("/skill:ketchup expands the mapped read-only summary skill", async () => {
+  const arg = "pi-ketchup-fixture-probe";
+  const { expanded, skill } = await expandQueuedSkill("ketchup", arg);
+  assert.match(expanded, /^<skill name="ketchup" location="[^"]+">/);
+  assert.equal(expanded.includes("../poteto-mode/references/pi-host.md"), true);
+  assert.equal(expanded.includes("Keep this turn read-only."), true);
+  assert.equal(expanded.includes("Notifications and subagent results are not their messages."), true);
+  assert.equal(expanded.endsWith(arg), true);
+  assert.equal(existsSync(resolve(skill.baseDir, "../bro/SKILL.md")), true);
+});

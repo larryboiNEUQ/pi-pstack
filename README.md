@@ -1,3 +1,5 @@
+当前同步为 pstack 0.15.17。完整测试 111/111 通过，包含新增 ketchup 的加载、展开和文本契约检查。详见 [0.15.17 升级记录](docs/upgrades/pstack-0.15.17.md)。本次没有本机安装，后文 0.15.15 的测试和安装描述是历史记录。
+
 # pi-pstack
 
 面向 Pi 的 pstack 适配包仓库。
@@ -10,7 +12,7 @@
 
 ## 生成与测试
 
-- `npm run generate`：从固定上游提交 `df581122cde17e6e27686b5a448bde23e4ad4318`（pstack 0.15.15）重新生成 `adapted/` 和 `docs/upstream-guide/`。
+- `npm run generate`：从固定上游提交 `9d76bcab133aefcccb16121d7be874e6aa823729`（pstack 0.15.17）重新生成 `adapted/` 和 `docs/upstream-guide/`。
 - `PSTACK_UPSTREAM_REPO=/absolute/path/to/plugins-clone`：可选指定含有固定提交的本地上游克隆，不改变 pin。生成器和测试均读取此变量。
 - `node --test test/generate.test.mjs test/pi-load.test.mjs`：窄范围生成器和离线 Pi 技能加载/展开验证；Issue 09 在独立 worktree 中运行一次，63 项通过，生成 47 个技能且输出相对集成基线无 diff。
 - `npm test`：完整本地测试集，包括生成器、安装器 fixture 和 Pi 技能加载/展开；测试需要本机上游快照、已安装的 Pi 和现有技能目录。本次升级前的全量基线是 104/104 通过。升级后的全量测试为 109/109 通过，包含新的帮助技能加载、展开和全部教程本地链接验证。早期 `f7706db` 的 86/86 门禁和 `test:installed` 1/1 是旧 pin 的历史记录。本轮验证写在 [0.15.15 升级记录](docs/upgrades/pstack-0.15.15.md)。未运行 `npm run test:installed`。
@@ -56,7 +58,7 @@
 
 ## 已决定
 
-- 上游内容固定为官方 cursor/plugins 提交 `df581122cde17e6e27686b5a448bde23e4ad4318`，pstack manifest 0.15.15。这不是对未来 HEAD 的动态跟踪。Issue 09 对旧 pin `c47b12849e43f18d5c374c7069c744cc55b0ea00`（0.15.5）的记录仍是当时证据。
+- 上游内容固定为官方 cursor/plugins 提交 `9d76bcab133aefcccb16121d7be874e6aa823729`，pstack manifest 0.15.17。这不是对未来 HEAD 的动态跟踪。Issue 09 对旧 pin `c47b12849e43f18d5c374c7069c744cc55b0ea00`（0.15.5）的记录仍是当时证据。
 - 适配方案见 ADR 0001 和 spec。
 - 生成的适配包提交进本仓库。
 - 测试分三层：生成器、Pi 技能加载、实机冒烟。
