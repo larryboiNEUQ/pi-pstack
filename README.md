@@ -1,10 +1,10 @@
-当前同步为 pstack 0.15.17。完整测试 111/111 通过，包含新增 ketchup 的加载、展开和文本契约检查。详见 [0.15.17 升级记录](docs/upgrades/pstack-0.15.17.md)。本次没有本机安装，后文 0.15.15 的测试和安装描述是历史记录。
+当前同步为 pstack 0.15.24。完整测试 112/112 通过，包含新增 in-your-own-words 与 sharpen 的加载、展开、help 显式命令路由，以及 ketchup 视觉摘要契约检查。详见 [0.15.24 升级记录](docs/upgrades/pstack-0.15.24.md)。本次没有本机安装，后文 0.15.17 与 0.15.15 的测试和安装描述是历史记录。
 
 # pi-pstack
 
 面向 Pi 的 pstack 适配包仓库。
 
-本仓库从固定的上游 pstack 快照生成 Pi 版技能（适配包），复用本机 Tintinweb 子代理系统，只支持显式调用。当前生成包有 53 个技能，在 `adapted/skills/`。裸名 `tdd` 和 `teach` 仍不进包，留给用户已有的 Matt Pocock 技能。上游正文以 `pstack-tdd` 和 `pstack-teach` 进包。三个子代理定义（poteto-agent、pstack-readonly、comment-sicko，含嵌套委派 allowlist）与模型表、订阅档案种子仍在生成包里。本轮没有安装，也没有改 `~/.agents/skills` 或 `~/.pi/agent`。
+本仓库从固定的上游 pstack 快照生成 Pi 版技能（适配包），复用本机 Tintinweb 子代理系统，只支持显式调用。当前生成包有 56 个技能，在 `adapted/skills/`。裸名 `tdd` 和 `teach` 仍不进包，留给用户已有的 Matt Pocock 技能。上游正文以 `pstack-tdd` 和 `pstack-teach` 进包。三个子代理定义（poteto-agent、pstack-readonly、comment-sicko，含嵌套委派 allowlist）与模型表、订阅档案种子仍在生成包里。本轮没有安装，也没有改 `~/.agents/skills` 或 `~/.pi/agent`。
 
 当前清单栈依次启用 `adaptation/changes.json`、`host-changes.json`、`path-changes.json`、`setup-changes.json`。改动条数以这四份清单为准，不在这里另记一个会过期的数字。路径适配和整篇重写的 setup-pstack 仍生效。上游 setup 的变化已复查，其源 SHA-256 守卫已更新。Issue 02 的子代理四模型/thinking/回退实机冒烟已通过；Issue 06 的模型建议、确认写入和备份验收在隔离 fixture 中通过，真实用户配置未改动。Issue 05（含续跑与 UI 截图能力告诫）、07（含 Claude 门禁兜底与评委续跑告诫）、08（用户批准的 PR 复用范围，含 Goal PTY 续跑与 print 模式失败记录）的实机验收均已完成。这些是当时记录，本轮没有重跑。
 
@@ -12,10 +12,10 @@
 
 ## 生成与测试
 
-- `npm run generate`：从固定上游提交 `9d76bcab133aefcccb16121d7be874e6aa823729`（pstack 0.15.17）重新生成 `adapted/` 和 `docs/upstream-guide/`。
+- `npm run generate`：从固定上游提交 `1e5c90a4b6f249917bd21fe361b3a2a7deb741b8`（pstack 0.15.24）重新生成 `adapted/` 和 `docs/upstream-guide/`。
 - `PSTACK_UPSTREAM_REPO=/absolute/path/to/plugins-clone`：可选指定含有固定提交的本地上游克隆，不改变 pin。生成器和测试均读取此变量。
 - `node --test test/generate.test.mjs test/pi-load.test.mjs`：窄范围生成器和离线 Pi 技能加载/展开验证；Issue 09 在独立 worktree 中运行一次，63 项通过，生成 47 个技能且输出相对集成基线无 diff。
-- `npm test`：完整本地测试集，包括生成器、安装器 fixture 和 Pi 技能加载/展开；测试需要本机上游快照、已安装的 Pi 和现有技能目录。本次升级前的全量基线是 104/104 通过。升级后的全量测试为 109/109 通过，包含新的帮助技能加载、展开和全部教程本地链接验证。早期 `f7706db` 的 86/86 门禁和 `test:installed` 1/1 是旧 pin 的历史记录。本轮验证写在 [0.15.15 升级记录](docs/upgrades/pstack-0.15.15.md)。未运行 `npm run test:installed`。
+- `npm test`：完整本地测试集，包括生成器、安装器 fixture 和 Pi 技能加载/展开；测试需要本机上游快照、已安装的 Pi 和现有技能目录。当前 0.15.24 同步的全量测试为 112/112 通过，包含新增 `in-your-own-words` 与 `sharpen` 的加载、展开、`poteto-help` 显式路由与 `ketchup` 视觉摘要契约检查，详见 [0.15.24 升级记录](docs/upgrades/pstack-0.15.24.md)。此前 0.15.17 的 111/111、0.15.15 的 109/109 与早期 `f7706db` 的 86/86 保留在各自升级记录中。本轮未运行 `npm run test:installed`。
 - `npm run test:installed`：安装后验证。它用 Pi `loadSkills` 加载真实 `~/.agents/skills`（含 `~/.pi/agent/skills` 默认目录），断言当前生成包里每个适配技能的 canonical 路径都落在 `adapted/`、无重名诊断、用户自有 tdd/teach 不受影响、make-bot-ui 不可加载。只检查目录加载，不覆盖扩展包内技能。本轮未运行。
 
 当前未配置 CI，CI 证据记为不可用；本地通过不等于 CI 通过。
@@ -33,7 +33,8 @@
 ## 从这里开始
 
 - [Spec #3](https://github.com/larryboiNEUQ/pi-pstack/issues/3)是最初的实现方案，包括映射说明、模型表、测试分层和与上游的差异。
-- [0.15.15 升级记录](docs/upgrades/pstack-0.15.15.md)记录本次 pin、上游变化、验证命令和未做的安装。对应 [spec #18](https://github.com/larryboiNEUQ/pi-pstack/issues/18) 和 [ticket #19](https://github.com/larryboiNEUQ/pi-pstack/issues/19)。
+- [0.15.24 升级记录](docs/upgrades/pstack-0.15.24.md)记录本次 pin、上游变化、验证命令和未做的安装。对应 [spec #31](https://github.com/larryboiNEUQ/pi-pstack/issues/31) 和 [ticket #32](https://github.com/larryboiNEUQ/pi-pstack/issues/32)。
+- [0.15.17 升级记录](docs/upgrades/pstack-0.15.17.md)与 [0.15.15 升级记录](docs/upgrades/pstack-0.15.15.md)保留历史升级记录。
 - [Issues](https://github.com/larryboiNEUQ/pi-pstack/issues)在 GitHub tracker 上按 `Blocked by` 前置关系推进。
 - [ADR 0001](docs/adr/0001-thin-skill-adaptation-on-tintinweb.md)记录核心决定：薄适配包、复用 Tintinweb、不写 extension、只做显式调用。
 - [CONTEXT.md](CONTEXT.md)定义项目术语。
@@ -58,7 +59,7 @@
 
 ## 已决定
 
-- 上游内容固定为官方 cursor/plugins 提交 `9d76bcab133aefcccb16121d7be874e6aa823729`，pstack manifest 0.15.17。这不是对未来 HEAD 的动态跟踪。Issue 09 对旧 pin `c47b12849e43f18d5c374c7069c744cc55b0ea00`（0.15.5）的记录仍是当时证据。
+- 上游内容固定为官方 cursor/plugins 提交 `1e5c90a4b6f249917bd21fe361b3a2a7deb741b8`，pstack manifest 0.15.24。这不是对未来 HEAD 的动态跟踪。Issue 09 对旧 pin `c47b12849e43f18d5c374c7069c744cc55b0ea00`（0.15.5）的记录仍是当时证据。
 - 适配方案见 ADR 0001 和 spec。
 - 生成的适配包提交进本仓库。
 - 测试分三层：生成器、Pi 技能加载、实机冒烟。
