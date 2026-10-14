@@ -11,8 +11,8 @@ import { test } from "node:test";
 
 import {
   ADAPTED_SKILLS,
-  AGENTS_SKILLS,
-  PI_AGENT_DIR,
+  REAL_AGENTS_SKILLS as AGENTS_SKILLS,
+  REAL_PI_AGENT_DIR as PI_AGENT_DIR,
   REPO_ROOT,
   adaptedNames,
   assertNoAdaptedProblems,

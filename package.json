@@ -4,7 +4,15 @@
   "type": "module",
   "scripts": {
     "generate": "node scripts/generate.mjs",
-    "test": "node --test 'test/**/*.test.mjs'",
-    "test:installed": "node --test test/installed-skills.mjs"
+    "test": "node --test \"test/**/*.test.mjs\"",
+    "test:installed": "node --test test/installed-skills.mjs",
+    "doctor": "node scripts/verify.mjs --doctor",
+    "verify": "node scripts/verify.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "1.1.0"
   }
 }

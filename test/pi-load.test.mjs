@@ -41,7 +41,7 @@ test("Pi loads the adapted package with no pstack name collisions (staged post-i
   assertNoAdaptedProblems(skills, diagnostics, adaptedNames());
 });
 
-test("external tdd and teach resolve to real user paths outside the package", async () => {
+test("external tdd and teach resolve to disposable fixture paths outside the package", async () => {
   for (const name of ["tdd", "teach"]) {
     const shared = join(AGENTS_SKILLS, name);
     const agentScoped = join(PI_AGENT_SKILLS, name);
@@ -289,7 +289,7 @@ function linkUserSkills(tmp) {
   return root;
 }
 
-test("prefixed package skills coexist with the original user tdd and teach files", async () => {
+test("prefixed package skills coexist with the external fixture tdd and teach files", async () => {
   const before = snapshotUserBytes();
   const tmp = mkdtempSync(join(tmpdir(), "pi-coexist-"));
   const userRoot = linkUserSkills(tmp);
@@ -316,7 +316,7 @@ test("prefixed package skills coexist with the original user tdd and teach files
   }
 });
 
-test("directory rename without frontmatter rename collides with the user skills", async () => {
+test("directory rename without frontmatter rename collides with the external fixture skills", async () => {
   const before = snapshotUserBytes();
   const tmp = mkdtempSync(join(tmpdir(), "pi-collide-"));
   const userRoot = linkUserSkills(tmp);

@@ -1,0 +1,43 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install local SDK
+        run: npm ci --ignore-scripts
+      - name: Prepare pinned upstream
+        shell: bash
+        run: |
+          upstream="$(mktemp -d "$RUNNER_TEMP/pstack-upstream-XXXXXX")"
+          pin="$(node --input-type=module -e 'import { PINNED_COMMIT } from "./scripts/generate.mjs"; console.log(PINNED_COMMIT)')"
+          git init "$upstream"
+          git -C "$upstream" remote add origin https://github.com/cursor/plugins.git
+          git -C "$upstream" fetch --depth=1 origin "$pin"
+          echo "PSTACK_UPSTREAM_REPO=$upstream" >> "$GITHUB_ENV"
+      - name: Verify package and isolated installer CLI
+        run: npm run verify
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-evidence
+          path: .artifacts/verification/
+          if-no-files-found: warn
+          include-hidden-files: true

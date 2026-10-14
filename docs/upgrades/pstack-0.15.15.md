@@ -74,3 +74,16 @@ npm run generate
 diff -r "$before/adapted" adapted
 diff -r "$before/upstream-guide" docs/upstream-guide
 ```
+
+## 合并后交付记录
+
+上述验证状态保留的是合并前记录。随后用户明确授权审查、合并和本机安装。
+
+- [PR #20](https://github.com/larryboiNEUQ/pi-pstack/pull/20) 已合并，提交为 `e41bccdf5cdc95613e3d00ee644951db6364ead3`。
+- 安装前备份旧适配包、用户模型表、订阅档案及三个代理定义。
+- 用户批准的 22 行模型表经暂存验证后原子替换。自有 tdd/teach、订阅档案和全局设置的当次保留检查通过。
+- 安装后完整测试 109/109 通过，真实本机技能加载检查 1/1 通过。
+- 独立 Opus 规范审查与 Sol 只读规格审查通过。运行检查由主会话接手，不是独立子代理运行验证。
+- 子代理审批问题记录在 [pi-auto-review #64](https://github.com/larryboiNEUQ/pi-auto-review/issues/64)。当时 CI 不可用，实际模型调用未验证。
+
+当前本机已升级为 0.15.24。本节是 0.15.15 的历史交付证据。
