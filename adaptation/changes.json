@@ -9,6 +9,38 @@
       "reason": "Use the explicit Pi command in the help routing table."
     },
     {
+      "id": "help-in-your-own-words-command",
+      "op": "replace",
+      "target": "skills/poteto-help/SKILL.md",
+      "anchor": "[`/in-your-own-words`](../in-your-own-words/SKILL.md)",
+      "text": "[`/skill:in-your-own-words`](../in-your-own-words/SKILL.md)",
+      "reason": "Use the explicit Pi command in the help routing table."
+    },
+    {
+      "id": "help-sharpen-command",
+      "op": "replace",
+      "target": "skills/poteto-help/SKILL.md",
+      "anchor": "[`/sharpen`](../sharpen/SKILL.md)",
+      "text": "[`/skill:sharpen`](../sharpen/SKILL.md)",
+      "reason": "Use the explicit Pi command in the help routing table."
+    },
+    {
+      "id": "recipes-in-your-own-words-command",
+      "op": "replace",
+      "target": "skills/poteto-help/references/recipes.md",
+      "anchor": "- `/in-your-own-words <long or messy ask>`",
+      "text": "- `/skill:in-your-own-words <long or messy ask>`",
+      "reason": "Use explicit /skill invocation in copied help prose."
+    },
+    {
+      "id": "recipes-sharpen-command",
+      "op": "replace",
+      "target": "skills/poteto-help/references/recipes.md",
+      "anchor": "- `/sharpen <your task>`",
+      "text": "- `/skill:sharpen <your task>`",
+      "reason": "Use explicit /skill invocation in copied help prose."
+    },
+    {
       "id": "rename-poteto-mode",
       "op": "replace",
       "target": "skills/poteto-mode/SKILL.md",

@@ -486,3 +486,24 @@ test("/skill:ketchup expands the mapped read-only summary skill", async () => {
   assert.equal(expanded.endsWith(arg), true);
   assert.equal(existsSync(resolve(skill.baseDir, "../bro/SKILL.md")), true);
 });
+
+test("/skill:in-your-own-words and /skill:sharpen expand via the public SDK queue path", async () => {
+  const inWords = await expandQueuedSkill("in-your-own-words", "pi-in-your-own-words-probe");
+  assert.match(inWords.expanded, /^<skill name="in-your-own-words" location="[^"]+">/);
+  assert.equal(
+    inWords.expanded.includes(
+      "Restate in your own words what you think the user's goals are and what problem they're trying to solve.",
+    ),
+    true,
+  );
+  assert.equal(inWords.expanded.endsWith("pi-in-your-own-words-probe"), true);
+
+  const sharpen = await expandQueuedSkill("sharpen", "pi-sharpen-probe");
+  assert.match(sharpen.expanded, /^<skill name="sharpen" location="[^"]+">/);
+  assert.equal(
+    sharpen.expanded.includes("Before starting, ask how a top expert would approach this task"),
+    true,
+  );
+  assert.equal(sharpen.expanded.includes("Don't hand back a rewritten prompt."), true);
+  assert.equal(sharpen.expanded.endsWith("pi-sharpen-probe"), true);
+});

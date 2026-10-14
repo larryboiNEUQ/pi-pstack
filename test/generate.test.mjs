@@ -168,8 +168,16 @@ test("skill set is upstream pstack skills minus excluded plus team-kit skills", 
     [...EXCLUDED].sort(),
   );
   assert.deepEqual(actual, expected);
-  assert.equal(actual.length, 54);
-  for (const name of ["benchmark-checklist", "correct", "principle-explain-the-number", "poteto-help"]) {
+  assert.equal(actual.length, 56);
+  for (const name of [
+    "benchmark-checklist",
+    "correct",
+    "in-your-own-words",
+    "ketchup",
+    "poteto-help",
+    "principle-explain-the-number",
+    "sharpen",
+  ]) {
     assert.ok(actual.includes(name), name);
   }
 });
@@ -370,7 +378,7 @@ test("add-file outputs are byte-identical to their declared sources", () => {
   }
 });
 
-test("comment-sicko agent is upstream verbatim plus the name delta", () => {
+test("comment-sicko agent is upstream verbatim plus the allowlist delta", () => {
   const tmp = mkdtempSync(join(tmpdir(), "gen-"));
   const { adaptedDir } = generateTo(tmp);
   const upstream = readFileSync(
@@ -378,7 +386,7 @@ test("comment-sicko agent is upstream verbatim plus the name delta", () => {
     "utf8",
   );
   const expected = upstream.replace(
-    "name: Comment Sicko",
+    "name: comment-sicko",
     "name: comment-sicko\nallowed_subagents: pstack-readonly, poteto-agent",
   );
   const generated = readFileSync(
@@ -1416,14 +1424,14 @@ test("fixture: declared source beneath a symlinked dir with missing leaf is refu
   );
 });
 
-test("pinned commit manifest version is 0.15.17", () => {
-  assert.equal(PINNED_COMMIT, "9d76bcab133aefcccb16121d7be874e6aa823729");
+test("pinned commit manifest version is 0.15.24", () => {
+  assert.equal(PINNED_COMMIT, "1e5c90a4b6f249917bd21fe361b3a2a7deb741b8");
   const raw = execFileSync(
     "git",
     ["-C", DEFAULT_REPO, "show", `${PINNED_COMMIT}:pstack/.cursor-plugin/plugin.json`],
     { encoding: "utf8" },
   );
-  assert.equal(JSON.parse(raw).version, "0.15.17");
+  assert.equal(JSON.parse(raw).version, "0.15.24");
   assert.equal(
     setupChange.expectedSha256,
     "d61b47256a18155a81c8e5ef95e3cc6569ce8c18317c35c4dd9c8015cf68cb59",
@@ -1885,15 +1893,31 @@ test("ketchup preserves its explicit-only current-chat read-only contract", () =
   const help = readFileSync(join(adaptedDir, "skills/poteto-help/SKILL.md"), "utf8");
   assert.equal(help.includes("[`/skill:ketchup`](../ketchup/SKILL.md)"), true);
   assert.equal(help.includes("[`/ketchup`](../ketchup/SKILL.md)"), false);
+  assert.equal(help.includes("[`/skill:in-your-own-words`](../in-your-own-words/SKILL.md)"), true);
+  assert.equal(help.includes("[`/in-your-own-words`](../in-your-own-words/SKILL.md)"), false);
+  assert.equal(help.includes("[`/skill:sharpen`](../sharpen/SKILL.md)"), true);
+  assert.equal(help.includes("[`/sharpen`](../sharpen/SKILL.md)"), false);
+  const recipes = readFileSync(join(adaptedDir, "skills/poteto-help/references/recipes.md"), "utf8");
+  assert.equal(recipes.includes("`/skill:in-your-own-words <long or messy ask>`"), true);
+  assert.equal(recipes.includes("`/in-your-own-words <long or messy ask>`"), false);
+  assert.equal(recipes.includes("`/skill:sharpen <your task>`"), true);
+  assert.equal(recipes.includes("`/sharpen <your task>`"), false);
+  const host = readFileSync(join(adaptedDir, "skills/poteto-mode/references/pi-host.md"), "utf8");
+  assert.equal(host.includes("`ketchup` visuals stay read-only."), true);
+  assert.equal(host.includes("Do not invoke an unbundled `/visualize` skill"), true);
+  assert.equal(host.includes("Do not append or strip `-fast`."), true);
   const skillDir = join(adaptedDir, "skills/ketchup");
   const text = readFileSync(join(skillDir, "SKILL.md"), "utf8");
   for (const expected of [
     "disable-model-invocation: true",
     "../poteto-mode/references/pi-host.md",
+    "Draw visuals with Mermaid or existing captured artifacts; do not invoke an unbundled `/visualize` skill or unapproved image generation.",
     "Keep this turn read-only.",
+    "Make visuals only from what you already have: do not change code, start an app or a job, or post anything.",
     "Notifications and subagent results are not their messages.",
     "Include any still waiting on the user, even one raised before their last message.",
     "Work you can still do yourself is not an action item.",
+    "Keep the whole reply well under 150 words, counting the words inside visuals and tables.",
   ]) assert.equal(text.includes(expected), true, expected);
   assert.equal(existsSync(resolve(skillDir, "../poteto-mode/references/pi-host.md")), true);
   assert.equal(existsSync(resolve(skillDir, "../bro/SKILL.md")), true);
